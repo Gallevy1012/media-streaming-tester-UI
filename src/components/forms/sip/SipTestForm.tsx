@@ -93,8 +93,6 @@ interface SipFormData {
       port: number;
       transportProtocol: string;
       connectionAddress?: string;
-      bandwidthType?: string;
-      bandwidth?: number;
       label?: string;
       packetTime?: number;
       maxPacketTime?: number;
@@ -668,7 +666,6 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
                     { value: 'UDP', label: 'UDP' },
                     { value: 'TCP', label: 'TCP' },
                     { value: 'TLS', label: 'TLS' },
-                    { value: 'SCTP', label: 'SCTP' },
                   ]}
                   required
                   helperText="Transport protocol for SIP communication"
@@ -705,7 +702,7 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
                       sessionVersion: Number(value)
                     }
                   }))}
-                  min={1}
+                  min={0}
                   helperText="SDP session version"
                   required
                 />
@@ -1098,40 +1095,6 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
                               }))}
                               placeholder="192.168.1.100"
                               helperText="Optional connection address override"
-                            />
-
-                            <TextInput
-                              id={`channel-${index}-bandwidthType`}
-                              label="Bandwidth Type (Optional)"
-                              value={channel.bandwidthType || ''}
-                              onChange={(value) => setFormData(prev => ({
-                                ...prev,
-                                sdp: {
-                                  ...prev.sdp!,
-                                  channels: prev.sdp!.channels.map((ch, i) =>
-                                    i === index ? { ...ch, bandwidthType: value } : ch
-                                  )
-                                }
-                              }))}
-                              placeholder="CT"
-                              helperText="Bandwidth type (CT, AS, etc.)"
-                            />
-
-                            <NumberInput
-                              id={`channel-${index}-bandwidth`}
-                              label="Bandwidth (Optional)"
-                              value={channel.bandwidth || ''}
-                              onChange={(value) => setFormData(prev => ({
-                                ...prev,
-                                sdp: {
-                                  ...prev.sdp!,
-                                  channels: prev.sdp!.channels.map((ch, i) =>
-                                    i === index ? { ...ch, bandwidth: value ? Number(value) : undefined } : ch
-                                  )
-                                }
-                              }))}
-                              min={0}
-                              helperText="Bandwidth in kbps"
                             />
 
                             <TextInput

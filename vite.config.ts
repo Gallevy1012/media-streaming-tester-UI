@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 // Get the target URL based on environment
 const getProxyTarget = () => {
-  const env = process.env.NODE_ENV || 'development';
+  const env = process.env.NODE_ENV || 'Dev';
   if (env === 'test') {
     return 'https://na1.test.nice-incontact.com';
   }

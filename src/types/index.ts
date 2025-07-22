@@ -14,7 +14,7 @@ export interface AuthState {
   loginResponse?: AuthResponse | null;
 }
 
-export type Environment = 'dev' | 'test' | 'perf-wcx';
+export type Environment = 'Dev' | 'test' | 'perf-wcx';
 
 export interface LoginCredentials {
   email: string;
@@ -124,9 +124,8 @@ export interface Channel {
   port: number;
   transportProtocol: string;
   connectionAddress?: string;
-  bandwidthType?: string;
-  bandwidth?: number;
   attributes?: Record<string, string>;
+  codecs?: number[];
 }
 
 export interface SdpDto {

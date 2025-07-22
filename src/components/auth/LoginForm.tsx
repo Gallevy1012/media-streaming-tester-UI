@@ -25,11 +25,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [formData, setFormData] = useState<LoginCredentials>({
     email: '',
     password: '',
-    environment: 'dev',
+    environment: 'Dev',
   });
   const { login } = useAuth();
 
-  const handleInputChange = (field: keyof LoginCredentials) => 
+  const handleInputChange = (field: keyof LoginCredentials) =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
       setFormData(prev => ({
         ...prev,
@@ -116,7 +116,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           size="small"
           sx={{ mb: 3 }}
         >
-          <MenuItem value="dev">Development</MenuItem>
+          <MenuItem value="Dev">Dev</MenuItem>
           <MenuItem value="test">Test</MenuItem>
           <MenuItem value="perf-wcx">Performance</MenuItem>
         </TextField>
