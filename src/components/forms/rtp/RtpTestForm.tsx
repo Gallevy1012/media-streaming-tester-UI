@@ -233,6 +233,7 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
             rtpTesterId: formData.rtpTesterId || '',
             senderId: formData.senderId || '',
             interactionKey: formData.interactionKey,
+            streamType: formData.streamType || 'MONO',
             testCommunicationConfigurations: formData.testCommunicationConfigurations || [],
           });
           break;

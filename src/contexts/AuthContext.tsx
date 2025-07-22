@@ -22,7 +22,7 @@ interface AuthProviderProps {
 const initialState: AuthState = {
   isAuthenticated: false,
   token: null,
-  environment: 'dev',
+  environment: 'Dev',
   expirationTime: null,
   user: null,
   loginResponse: null,
@@ -45,7 +45,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
     case 'LOGIN_SUCCESS':
       // Store token in localStorage for testerHttpClient
       console.log('Login successful:', action.payload);
-      
+
       return {
         ...state,
         isAuthenticated: true,
@@ -71,7 +71,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
     case 'LOGOUT':
       // Clear token from localStorage
       localStorage.removeItem('auth_token');
-      
+
       return {
         ...initialState,
         environment: state.environment,
@@ -94,13 +94,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = useCallback(async (credentials: LoginCredentials) => {
     try {
       dispatch({ type: 'LOGIN_START' });
-      
+
       const response = await authService.login(credentials);
-      
+
       // Calculate expiration time
       const expirationTime = new Date();
       expirationTime.setSeconds(expirationTime.getSeconds() + response.expires_in);
-      
+
       dispatch({
         type: 'LOGIN_SUCCESS',
         payload: {
@@ -123,20 +123,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const isTokenExpiring = useCallback((): boolean => {
     if (!state.expirationTime) return false;
-    
+
     const now = new Date();
     const timeUntilExpiration = state.expirationTime.getTime() - now.getTime();
     const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
-    
+
     return timeUntilExpiration <= fiveMinutes;
   }, [state.expirationTime]);
 
   const getTimeUntilExpiration = useCallback((): number => {
     if (!state.expirationTime) return 0;
-    
+
     const now = new Date();
     const timeUntilExpiration = state.expirationTime.getTime() - now.getTime();
-    
+
     return Math.max(0, timeUntilExpiration);
   }, [state.expirationTime]);
 

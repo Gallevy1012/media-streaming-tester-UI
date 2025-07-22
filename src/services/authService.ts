@@ -8,8 +8,8 @@ class AuthService {
       'test': 'na1.test.nice-incontact.com',
       'perf-wcx': 'na1.perf-wcx.nice-incontact.com',
     };
-    
-    return `https://${environmentMap[environment] || environmentMap['dev']}`;
+
+    return `https://${environmentMap[environment] || environmentMap['Dev']}`;
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
@@ -23,26 +23,26 @@ class AuthService {
       const url = '/api/public/authentication/v1/login';
 
       console.log('Making login request to:', url);
-      
+
       const response = await axios.post(url, requestBody, {
         headers: {
           'Content-Type': 'application/json',
         },
         timeout: 10000,
       });
-      
+
       console.log('Login response:', response.data);
-      
+
       // Store the token for tester requests
       if (response.data.token) {
         localStorage.setItem('auth_token', response.data.token);
       }
-      
+
       // Store environment info for later use
       if (response.data.access_token) {
         localStorage.setItem('auth_environment', credentials.environment);
       }
-      
+
       return response.data;
     } catch (error) {
         console.error('Login failed:', error);
@@ -86,7 +86,7 @@ class AuthService {
   }
 
   getCurrentEnvironment(): string {
-    return localStorage.getItem('auth_environment') || 'dev';
+    return localStorage.getItem('auth_environment') || 'Dev';
   }
 
   getTesterBaseUrl(): string {

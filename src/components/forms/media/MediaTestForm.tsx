@@ -12,8 +12,11 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  TextField,
+  Tabs,
+  Tab,
 } from '@mui/material';
-import { Send as SendIcon, Security as SecurityIcon, ArrowBack as ArrowBackIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
+import { Send as SendIcon, Security as SecurityIcon, ArrowBack as ArrowBackIcon, ExpandMore as ExpandMoreIcon, ContentCopy as ContentCopyIcon } from '@mui/icons-material';
 import { TextInput, Dropdown, NumberInput } from '../../common';
 import { AuthDialog } from '../../auth';
 import { ColoredJsonViewer } from '../../response';
@@ -98,9 +101,8 @@ interface MediaFormData {
       mediaType: string;
       port: number;
       transportProtocol?: string;
+      codecs?: number[]; // Add codecs array
       connectionAddress?: string;
-      bandwidthType?: string;
-      bandwidth?: number;
       label?: string;
       packetTime?: number;
       maxPacketTime?: number;
@@ -124,6 +126,11 @@ interface MediaFormData {
 
 export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'create-media-tester', onTestComplete, onBack }) => {
   const [searchParams] = useSearchParams();
+  
+  // Add state for tabs and raw invite parsing (only for send-invite function)
+  const [activeTab, setActiveTab] = useState(0);
+  const [rawInviteText, setRawInviteText] = useState('');
+  const [parseError, setParseError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<MediaFormData>(() => {
     switch (functionId) {
@@ -168,6 +175,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
               mediaType: 'AUDIO',
               port: 62000,
               transportProtocol: 'RTP_AVP',
+              codecs: [0, 8],
               connectionAddress: '',
               label: '',
               packetTime: 20,
@@ -272,6 +280,325 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
     setMediaTesterAddDialogIdFunction(addDialogId);
   }, [addTester, removeTesterByTesterId, addDialogId]);
 
+  // SIP INVITE parsing function (for send-invite function)
+  const parseSipInvite = (sipInviteText: string): Partial<MediaFormData> | null => {
+    try {
+      setParseError(null);
+      
+      const lines = sipInviteText.trim().split('\n');
+      const parsed: Partial<MediaFormData> = {
+        destinationAddress: {
+          ip: '',
+          port: 5060,
+          transportProtocol: 'UDP' as TransportProtocol,
+          alias: '',
+        },
+        customHeaders: {},
+        sdp: {
+          sessionVersion: 1,
+          sessionName: 'Media Test Session',
+          sessionInformation: '',
+          origin: {
+            userName: 'media-test',
+            sessionId: Date.now().toString(),
+            sessionVersion: 1,
+            networkType: 'IN' as const,
+            addressType: 'IP4' as const,
+            ip: '127.0.0.1',
+          },
+          connection: {
+            networkType: 'IN' as const,
+            addressType: 'IP4' as const,
+            ip: '127.0.0.1',
+          },
+          timing: {
+            startTime: 0,
+            stopTime: 0,
+          },
+          channels: [],
+        },
+      };
+
+      let inSdpSection = false;
+      let sdpLines: string[] = [];
+
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        
+        // Skip empty lines
+        if (!trimmedLine) continue;
+
+        // Check if we've reached the SDP section
+        if (trimmedLine.startsWith('v=')) {
+          inSdpSection = true;
+        }
+
+        if (inSdpSection) {
+          sdpLines.push(trimmedLine);
+          continue;
+        }
+
+        // Parse SIP headers
+        if (trimmedLine.startsWith('INVITE ')) {
+          // Parse INVITE line: INVITE sip:10.221.19.252;transport=udp SIP/2.0
+          // Handle both: sip:host and sip:user@host formats
+          const inviteMatch = trimmedLine.match(/INVITE\s+sip:(?:([^@]+)@)?([^:;]+)(?::(\d+))?(?:;transport=([^\s]+))?/i);
+          if (inviteMatch) {
+            parsed.destinationAddress!.ip = inviteMatch[2]; // host is always in position 2
+            if (inviteMatch[3]) {
+              parsed.destinationAddress!.port = parseInt(inviteMatch[3]);
+            }
+            if (inviteMatch[4]) {
+              parsed.destinationAddress!.transportProtocol = inviteMatch[4].toUpperCase() as TransportProtocol;
+            }
+            // Store the user part if present
+            if (inviteMatch[1]) {
+              parsed.customHeaders!['INVITE-User'] = inviteMatch[1];
+            }
+          }
+        } else if (trimmedLine.startsWith('To:')) {
+          // Parse To header: To: "VRSP" <sip:10.221.19.252>
+          // Store the complete To header for proper reconstruction
+          parsed.customHeaders!['To'] = trimmedLine.substring(3).trim();
+        } else if (trimmedLine.startsWith('From:')) {
+          // Parse From header: From: <sip:acmeSrc@172.21.13.164>;tag=1c257669691
+          // Store the complete From header for proper reconstruction
+          parsed.customHeaders!['From'] = trimmedLine.substring(5).trim();
+        } else if (trimmedLine.includes(':')) {
+          // Parse other headers
+          const colonIndex = trimmedLine.indexOf(':');
+          const headerName = trimmedLine.substring(0, colonIndex).trim();
+          const headerValue = trimmedLine.substring(colonIndex + 1).trim();
+          
+          // Store custom headers (excluding standard ones we handle separately)
+          if (!['Via', 'Max-Forwards', 'Call-ID', 'CSeq', 'Contact', 'Content-Type', 'Content-Length', 'MIME-Version'].includes(headerName)) {
+            parsed.customHeaders![headerName] = headerValue;
+          }
+        }
+      }
+
+      // Parse SDP section
+      if (sdpLines.length > 0) {
+        console.log('MediaTestForm - SDP Lines found:', sdpLines.length);
+        console.log('MediaTestForm - SDP Lines:', sdpLines);
+        const sdpParsed = parseSdpSection(sdpLines);
+        console.log('MediaTestForm - SDP Parsed result:', sdpParsed);
+        if (sdpParsed) {
+          parsed.sdp = { ...parsed.sdp!, ...sdpParsed };
+          console.log('MediaTestForm - Final parsed SDP:', parsed.sdp);
+        }
+      }
+
+      return parsed;
+    } catch (error) {
+      console.error('SIP parsing error:', error);
+      setParseError(`Failed to parse SIP INVITE: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return null;
+    }
+  };
+
+  // SDP parsing function (for send-invite function)
+  const parseSdpSection = (sdpLines: string[]) => {
+    console.log('=== MediaTestForm SDP PARSING START ===');
+    console.log('Input SDP lines:', sdpLines);
+    
+    const sdp: any = {
+      sessionVersion: 0,
+      sessionName: 'Media Test Session',
+      origin: {
+        userName: 'media-test',
+        sessionId: Date.now().toString(),
+        sessionVersion: 1,
+        networkType: 'IN' as const,
+        addressType: 'IP4' as const,
+        ip: '127.0.0.1',
+      },
+      connection: {
+        networkType: 'IN' as const,
+        addressType: 'IP4' as const,
+        ip: '127.0.0.1',
+      },
+      timing: {
+        startTime: 0,
+        stopTime: 0,
+      },
+      channels: [], // Start with empty channels array
+    };
+
+    let currentChannel: any = null;
+    let channelCount = 0;
+
+    for (const line of sdpLines) {
+      console.log('MediaTestForm - Processing SDP line:', line);
+      
+      if (line.startsWith('v=')) {
+        sdp.sessionVersion = parseInt(line.substring(2));
+      } else if (line.startsWith('o=')) {
+        // Parse origin: o=- 2142479003 635515518 IN IP4 10.231.242.146
+        const parts = line.substring(2).split(' ');
+        if (parts.length >= 6) {
+          sdp.origin = {
+            userName: parts[0] === '-' ? 'media-test' : parts[0],
+            sessionId: parts[1],
+            sessionVersion: parseInt(parts[2]),
+            networkType: parts[3] as 'IN',
+            addressType: parts[4] as 'IP4' | 'IP6',
+            ip: parts[5],
+          };
+        }
+      } else if (line.startsWith('s=')) {
+        sdp.sessionName = line.substring(2) || 'Media Test Session';
+      } else if (line.startsWith('c=')) {
+        // Parse connection: c=IN IP4 10.231.242.146
+        const parts = line.substring(2).split(' ');
+        if (parts.length >= 3) {
+          sdp.connection = {
+            networkType: parts[0] as 'IN',
+            addressType: parts[1] as 'IP4' | 'IP6',
+            ip: parts[2],
+          };
+        }
+      } else if (line.startsWith('t=')) {
+        // Parse timing: t=0 0
+        const parts = line.substring(2).split(' ');
+        if (parts.length >= 2) {
+          sdp.timing = {
+            startTime: parseInt(parts[0]),
+            stopTime: parseInt(parts[1]),
+          };
+        }
+      } else if (line.startsWith('m=')) {
+        // Parse media: m=audio 6304 RTP/AVP 0 8 18 127
+        console.log('MediaTestForm - *** FOUND NEW MEDIA LINE ***:', line);
+        const parts = line.substring(2).split(' ');
+        console.log('MediaTestForm - Media line parts:', parts);
+        
+        if (parts.length >= 3) {
+          // Save previous channel if exists
+          if (currentChannel) {
+            channelCount++;
+            console.log(`MediaTestForm - Saving channel #${channelCount}:`, currentChannel);
+            sdp.channels.push(currentChannel);
+          }
+          
+          // Convert SDP transport protocol format to enum format
+          let transportProtocol = parts[2];
+          if (transportProtocol === 'RTP/AVP') {
+            transportProtocol = 'RTP_AVP';
+          } else if (transportProtocol === 'RTP/SAVP') {
+            transportProtocol = 'RTP_SAVP';
+          }
+          
+          // Extract codecs (numbers after transport protocol) - THIS IS KEY!
+          const codecParts = parts.slice(3); // Get everything after transport protocol
+          console.log('MediaTestForm - Codec parts from m= line:', codecParts);
+          const codecs = codecParts.map(codec => parseInt(codec)).filter(codec => !isNaN(codec));
+          console.log('MediaTestForm - Parsed codecs:', codecs);
+          
+          currentChannel = {
+            mediaType: parts[0].toUpperCase(),
+            port: parseInt(parts[1]),
+            transportProtocol: transportProtocol,
+            codecs: codecs, // Store codecs from m= line
+            connectionAddress: '',
+            attributes: {},
+            label: '',
+            packetTime: 20,
+            maxPacketTime: 20,
+            channelState: 'SEND',
+          };
+          console.log('MediaTestForm - Created new channel:', currentChannel);
+        }
+      } else if (line.startsWith('a=')) {
+        // Parse attributes
+        if (currentChannel) {
+          const attrLine = line.substring(2);
+          if (attrLine.startsWith('label:')) {
+            currentChannel.label = attrLine.substring(6);
+          } else if (attrLine.startsWith('ptime:')) {
+            currentChannel.packetTime = parseInt(attrLine.substring(6));
+          } else if (attrLine.startsWith('maxptime:')) {
+            currentChannel.maxPacketTime = parseInt(attrLine.substring(9));
+          } else if (attrLine.startsWith('sendonly')) {
+            currentChannel.channelState = 'SEND';
+          } else if (attrLine.startsWith('recvonly')) {
+            currentChannel.channelState = 'RECEIVE';
+          } else if (attrLine.startsWith('sendrecv')) {
+            currentChannel.channelState = 'SEND_AND_RECEIVE';
+          } else if (attrLine.startsWith('inactive')) {
+            currentChannel.channelState = 'INACTIVE';
+          } else {
+            // Store other attributes
+            const colonIndex = attrLine.indexOf(':');
+            if (colonIndex > 0) {
+              const attrName = attrLine.substring(0, colonIndex);
+              const attrValue = attrLine.substring(colonIndex + 1);
+              currentChannel.attributes[attrName] = attrValue;
+            } else {
+              currentChannel.attributes[attrLine] = '';
+            }
+          }
+        }
+      }
+    }
+
+    // Add the last channel
+    if (currentChannel) {
+      channelCount++;
+      console.log(`MediaTestForm - Adding final channel #${channelCount}:`, currentChannel);
+      sdp.channels.push(currentChannel);
+    }
+
+    console.log('=== MediaTestForm FINAL PARSING RESULT ===');
+    console.log('Total channels created:', sdp.channels.length);
+    console.log('All channels:', sdp.channels);
+    console.log('=== MediaTestForm SDP PARSING END ===');
+
+    // Filter out invalid channels (those without proper mediaType or port)
+    const validChannels = sdp.channels.filter((channel: any) => 
+      channel.mediaType && 
+      channel.port && 
+      channel.port > 0 && 
+      channel.transportProtocol
+    );
+
+    console.log('MediaTestForm - Channels after filtering:', validChannels.length, validChannels);
+    sdp.channels = validChannels;
+
+    return sdp;
+  };
+
+  // Handle parsing and populating form (for send-invite function)
+  const handleParseAndPopulate = () => {
+    if (!rawInviteText.trim()) {
+      setParseError('Please enter a SIP INVITE message');
+      return;
+    }
+
+    const parsed = parseSipInvite(rawInviteText);
+    if (parsed) {
+      // Completely replace the form data with parsed data, keeping only the mediaTesterId
+      setFormData(prev => ({
+        ...prev,
+        destinationAddress: parsed.destinationAddress || prev.destinationAddress,
+        customHeaders: parsed.customHeaders || {},
+        sdp: parsed.sdp ? {
+          ...parsed.sdp,
+          // Ensure we only use parsed channels, not merge with existing
+          channels: parsed.sdp.channels || []
+        } : prev.sdp,
+      }));
+      
+      // Debug log to help identify channel duplication
+      console.log('Parsed SDP:', parsed.sdp);
+      console.log('Parsed channels count:', parsed.sdp?.channels?.length || 0);
+      console.log('Parsed channels:', parsed.sdp?.channels);
+      
+      setActiveTab(0); // Switch to manual form tab
+      setParseError(null);
+    }
+  };
+
   // Port validation function
   const validatePort = (port: number): string | null => {
     if (port < 42000 || port > 62000) {
@@ -358,8 +685,11 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
             sdp: {
               ...formData.sdp!,
               channels: formData.sdp!.channels.map(channel => ({
-                ...channel,
-                transportProtocol: channel.transportProtocol || 'RTP/AVP'
+                mediaType: channel.mediaType,
+                port: channel.port,
+                transportProtocol: channel.transportProtocol || 'RTP_AVP',
+                connectionAddress: channel.connectionAddress,
+                attributes: channel.attributes,
               }))
             },
           });
@@ -605,7 +935,113 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
           </Alert>
         )}
 
-        <form onSubmit={handleSubmit}>
+        {parseError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {parseError}
+          </Alert>
+        )}
+
+        {/* Show tabs only for send-invite function */}
+        {functionId === 'send-invite' && (
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+            <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
+              <Tab label="Manual Form" />
+              <Tab label="Send Existing Invite" />
+            </Tabs>
+          </Box>
+        )}
+
+        {/* Tab Content for send-invite or regular form for other functions */}
+        {functionId === 'send-invite' && activeTab === 1 ? (
+          // Raw Invite Tab (only for send-invite)
+          <Box>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Paste Your SIP INVITE Message
+            </Typography>
+            
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Copy and paste the complete SIP INVITE message below. The parser will extract all fields and populate the manual form.
+            </Typography>
+
+            <Box sx={{ mb: 3 }}>
+              <TextInput
+                id="mediaTesterId"
+                label="Media Tester ID"
+                value={formData.mediaTesterId || ''}
+                onChange={(value) => setFormData(prev => ({ ...prev, mediaTesterId: value }))}
+                placeholder="Enter Media Tester ID"
+                helperText="UUID of the media tester that will send this invite"
+                required
+              />
+            </Box>
+
+            <TextField
+              fullWidth
+              multiline
+              rows={20}
+              value={rawInviteText}
+              onChange={(e) => setRawInviteText(e.target.value)}
+              placeholder={`Paste your SIP INVITE here, for example:
+
+INVITE sip:10.221.19.252;transport=udp SIP/2.0
+Via: SIP/2.0/UDP dror-mz-acvce01-trust-na1.openrec.dev.internal:5070;branch=z9hG4bKac1164773657;received=10.231.242.27
+Max-Forwards: 69
+From: <sip:acmeSrc@172.21.13.164>;tag=1c257669691
+To: "VRSP" <sip:10.221.19.252>
+Call-ID: 13549686172072025122131@dror-mz-acvce01-trust-na1.openrec.dev.internal
+CSeq: 1 INVITE
+Contact: <sip:acmeSrc@dror-mz-acvce01-trust-na1.openrec.dev.internal:5070>;+sip.src
+Content-Type: multipart/mixed;boundary=boundary_ac1504
+Content-Length: 2352
+
+--boundary_ac1504
+Content-Type: application/sdp
+
+v=0
+o=- 2142479003 635515518 IN IP4 10.231.242.146
+s=-
+c=IN IP4 10.231.242.146
+t=0 0
+m=audio 6304 RTP/AVP 0 8 18 127
+a=label:34146659
+a=sendonly`}
+              sx={{ mb: 3 }}
+              label="SIP INVITE Message"
+            />
+
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setRawInviteText('');
+                  setParseError(null);
+                }}
+                disabled={!rawInviteText}
+              >
+                Clear
+              </Button>
+              
+              <Button
+                variant="contained"
+                startIcon={<ContentCopyIcon />}
+                onClick={handleParseAndPopulate}
+                disabled={!rawInviteText.trim() || !formData.mediaTesterId?.trim()}
+              >
+                Parse & Use INVITE
+              </Button>
+            </Box>
+
+            {rawInviteText && formData.mediaTesterId && (
+              <Box sx={{ mt: 3 }}>
+                <Alert severity="info">
+                  Click "Parse & Use INVITE" to extract the invite details and switch to the manual form, then click "Send Request" to execute it.
+                </Alert>
+              </Box>
+            )}
+          </Box>
+        ) : (
+          // Regular form (for all functions or manual tab for send-invite)
+          <form onSubmit={handleSubmit}>
           <Box
             sx={{
               display: 'grid',
@@ -736,7 +1172,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
                       sessionVersion: Number(value)
                     }
                   }))}
-                  min={1}
+                  min={0}
                   helperText="SDP session version"
                   required
                 />
@@ -1028,7 +1464,39 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
                   </AccordionSummary>
                   <AccordionDetails>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {formData.sdp?.channels?.map((channel, index) => (
+                      {formData.sdp?.channels?.length === 0 ? (
+                        <Box textAlign="center" py={2}>
+                          <Typography variant="body2" color="textSecondary" gutterBottom>
+                            No channels configured. Add channels manually or parse from SIP INVITE.
+                          </Typography>
+                          <Button
+                            variant="outlined"
+                            onClick={() => setFormData(prev => ({
+                              ...prev,
+                              sdp: {
+                                ...prev.sdp!,
+                                channels: [
+                                  {
+                                    mediaType: 'AUDIO',
+                                    port: 42000,
+                                    transportProtocol: 'RTP_AVP',
+                                    codecs: [0, 8],
+                                    connectionAddress: '',
+                                    label: '',
+                                    packetTime: 20,
+                                    maxPacketTime: 20,
+                                    channelState: 'SEND',
+                                    attributes: {},
+                                  }
+                                ]
+                              }
+                            }))}
+                          >
+                            Add Channel
+                          </Button>
+                        </Box>
+                      ) : (
+                        formData.sdp?.channels?.map((channel, index) => (
                         <Box key={index} sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
                           <Typography variant="subtitle2" sx={{ mb: 2 }}>
                             Channel {index + 1}
@@ -1115,6 +1583,26 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
                             />
 
                             <TextInput
+                              id={`channel-${index}-codecs`}
+                              label="Codecs"
+                              value={channel.codecs?.join(' ') || ''}
+                              onChange={(value) => setFormData(prev => ({
+                                ...prev,
+                                sdp: {
+                                  ...prev.sdp!,
+                                  channels: prev.sdp!.channels.map((ch, i) =>
+                                    i === index ? { 
+                                      ...ch, 
+                                      codecs: value ? value.split(' ').map(c => parseInt(c.trim())).filter(n => !isNaN(n)) : []
+                                    } : ch
+                                  )
+                                }
+                              }))}
+                              placeholder="0 8 18 127"
+                              helperText="space-separated codec numbers (e.g., 0 8 18 127)"
+                            />
+
+                            <TextInput
                               id={`channel-${index}-connectionAddress`}
                               label="Connection Address (Optional)"
                               value={channel.connectionAddress || ''}
@@ -1129,40 +1617,6 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
                               }))}
                               placeholder="192.168.1.100"
                               helperText="Optional connection address override"
-                            />
-
-                            <TextInput
-                              id={`channel-${index}-bandwidthType`}
-                              label="Bandwidth Type (Optional)"
-                              value={channel.bandwidthType || ''}
-                              onChange={(value) => setFormData(prev => ({
-                                ...prev,
-                                sdp: {
-                                  ...prev.sdp!,
-                                  channels: prev.sdp!.channels.map((ch, i) =>
-                                    i === index ? { ...ch, bandwidthType: value } : ch
-                                  )
-                                }
-                              }))}
-                              placeholder="CT"
-                              helperText="Bandwidth type (CT, AS, etc.)"
-                            />
-
-                            <NumberInput
-                              id={`channel-${index}-bandwidth`}
-                              label="Bandwidth (Optional)"
-                              value={channel.bandwidth || ''}
-                              onChange={(value) => setFormData(prev => ({
-                                ...prev,
-                                sdp: {
-                                  ...prev.sdp!,
-                                  channels: prev.sdp!.channels.map((ch, i) =>
-                                    i === index ? { ...ch, bandwidth: value ? Number(value) : undefined } : ch
-                                  )
-                                }
-                              }))}
-                              min={0}
-                              helperText="Bandwidth in kbps"
                             />
 
                             <TextInput
@@ -1286,7 +1740,8 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
                             </Button>
                           )}
                         </Box>
-                      ))}
+                        ))
+                      )}
 
                       <Button
                         variant="outlined"
@@ -1298,8 +1753,9 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
                               ...prev.sdp!.channels,
                               {
                                 mediaType: 'AUDIO',
-                                port: 62000,
+                                port: 42000 + prev.sdp!.channels.length * 2,
                                 transportProtocol: 'RTP_AVP',
+                                codecs: [0, 8],
                                 connectionAddress: '',
                                 label: '',
                                 packetTime: 20,
@@ -1660,7 +2116,8 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
               {isLoading ? 'Sending...' : 'Send Request'}
             </Button>
           </Box>
-        </form>
+          </form>
+        )}
 
         <ColoredJsonViewer
           response={result}
