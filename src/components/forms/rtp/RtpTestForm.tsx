@@ -153,7 +153,7 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
           testStreamConfigurations: [
             firstConfig,
             {
-              ssrc: 67890,
+              ssrc: 12346,
               streamSize: firstConfig.streamSize,
               sourcePort: firstConfig.sourcePort + 2,
               targetIp: firstConfig.targetIp,
@@ -315,7 +315,7 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
               value={formData.ssrcs?.join(', ') || ''}
               onChange={handleInputChange('ssrcs')}
               required
-              placeholder="12345, 67890, 11111"
+              placeholder="12345, 12346"
               helperText="List of Synchronization Source identifiers"
             />
             <NumberInput
@@ -674,7 +674,7 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
               value={formData.ssrcs?.join(', ') || ''}
               onChange={handleInputChange('ssrcs')}
               required
-              placeholder="12345, 67890, 11111"
+              placeholder="12345, 12346"
               helperText="List of Synchronization Source identifiers"
             />
             <TextInput

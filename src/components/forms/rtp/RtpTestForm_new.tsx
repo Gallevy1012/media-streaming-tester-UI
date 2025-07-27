@@ -181,7 +181,7 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
           testStreamConfigurations: [
             firstConfig,
             {
-              ssrc: 67890,
+              ssrc: 12346,
               streamSize: firstConfig.streamSize,
               sourcePort: firstConfig.sourcePort + 2,
               targetIp: firstConfig.targetIp,

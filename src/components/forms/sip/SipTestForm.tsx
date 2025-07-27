@@ -479,7 +479,7 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
           },
           mediaSourceType: formData.mediaSourceType,
           unsupportedCodecs: formData.unsupportedCodecs,
-          saveDialog: formData.saveDialog,
+          saveDialog: true,
           isStateless: formData.isStateless,
         };
 
@@ -1484,15 +1484,6 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
                         />
                       }
                       label="Use Default Handlers"
-                    />
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={formData.saveDialog || false}
-                          onChange={(e) => handleInputChange('saveDialog')(e.target.checked)}
-                        />
-                      }
-                      label="Save Dialog"
                     />
                     <FormControlLabel
                       control={

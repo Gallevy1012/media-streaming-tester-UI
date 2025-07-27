@@ -14,7 +14,7 @@ import {
   Tab,
 } from '@mui/material';
 import { Send as SendIcon, Security as SecurityIcon, ArrowBack as ArrowBackIcon, ExpandMore as ExpandMoreIcon, ContentCopy as ContentCopyIcon } from '@mui/icons-material';
-import { TextInput, Dropdown, NumberInput } from '../../common';
+import { TextInput, Dropdown, NumberInput, MultiSelect } from '../../common';
 import { AuthDialog } from '../../auth';
 import { ColoredJsonViewer } from '../../response';
 import { useAuthenticatedRequest } from '../../../hooks/useAuthenticatedRequest';
@@ -114,6 +114,8 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
+  const [customCodecValues, setCustomCodecValues] = useState<{[channelIndex: number]: string}>({});
+  const [showCustomCodecInput, setShowCustomCodecInput] = useState<{[channelIndex: number]: boolean}>({});
 
   const { state: authState } = useAuth();
   const { isAuthDialogOpen, closeAuthDialog, executeWithAuth } = useAuthenticatedRequest();
@@ -341,7 +343,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
           console.log('Parsed codecs:', codecs);
           
           // If no codecs found, use default common codecs
-          const finalCodecs = codecs.length > 0 ? codecs : [0, 8];
+          const finalCodecs = codecs.length > 0 ? codecs : [0, 8, 18];
           console.log('Final codecs (with defaults if needed):', finalCodecs);
           
           currentChannel = {
@@ -477,7 +479,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
             ...formData.sdp,
             channels: formData.sdp.channels.map(channel => {
               // Ensure codecs array is never empty
-              const finalCodecs = channel.codecs && channel.codecs.length > 0 ? channel.codecs : [0, 8];
+              const finalCodecs = channel.codecs && channel.codecs.length > 0 ? channel.codecs : [0, 8, 18];
               
               // Ensure transport protocol is in the correct format for server
               let serverTransportProtocol = channel.transportProtocol;
@@ -1075,25 +1077,125 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                             required
                           />
 
-                          <TextInput
-                            id={`channel-${index}-codecs`}
-                            label="Codecs"
-                            value={channel.codecs?.join(' ') || ''}
-                            onChange={(value) => setFormData(prev => ({
-                              ...prev,
-                              sdp: {
-                                ...prev.sdp,
-                                channels: prev.sdp.channels.map((ch, i) =>
-                                  i === index ? { 
-                                    ...ch, 
-                                    codecs: value ? value.split(' ').map(c => parseInt(c.trim())).filter(n => !isNaN(n)) : []
-                                  } : ch
-                                )
-                              }
-                            }))}
-                            placeholder="0 8 18 127"
-                            helperText="space-separated codec numbers (e.g., 0 8 18 127)"
-                          />
+                          <Box>
+                            <MultiSelect
+                              id={`channel-${index}-codecs`}
+                              label="Codecs"
+                              values={(() => {
+                                // Only show actual codec values, not the "other" option
+                                return channel.codecs?.map(c => c.toString()) || [];
+                              })()}
+                              onChange={(values) => {
+                                // Check if "other" was selected or deselected
+                                if (values.includes('other')) {
+                                  // Show the custom input but don't add "other" to the codec list
+                                  setShowCustomCodecInput(prev => ({ ...prev, [index]: true }));
+                                  // Remove "other" from the values and update with actual codecs only
+                                  const numericCodecs = values.filter(v => v !== 'other').map(v => parseInt(v)).filter(n => !isNaN(n));
+                                  
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    sdp: {
+                                      ...prev.sdp,
+                                      channels: prev.sdp.channels.map((ch, i) =>
+                                        i === index ? { ...ch, codecs: numericCodecs } : ch
+                                      )
+                                    }
+                                  }));
+                                } else {
+                                  // "other" was deselected, hide custom input
+                                  if (showCustomCodecInput[index]) {
+                                    setShowCustomCodecInput(prev => ({ ...prev, [index]: false }));
+                                    setCustomCodecValues(prev => ({ ...prev, [index]: '' }));
+                                  }
+                                  
+                                  // Normal codec selection
+                                  const numericCodecs = values.map(v => parseInt(v)).filter(n => !isNaN(n));
+                                  
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    sdp: {
+                                      ...prev.sdp,
+                                      channels: prev.sdp.channels.map((ch, i) =>
+                                        i === index ? { ...ch, codecs: numericCodecs } : ch
+                                      )
+                                    }
+                                  }));
+                                }
+                              }}
+                              options={[
+                                { value: '0', label: 'PCMU (0)' },
+                                { value: '8', label: 'PCMA (8)' },
+                                { value: '18', label: 'G729 (18)' },
+                                { value: '127', label: 'Custom (127)' },
+                                // Add existing custom codecs as options
+                                ...(channel.codecs?.filter(c => ![0, 8, 18, 127].includes(c)).map(c => ({
+                                  value: c.toString(),
+                                  label: `Codec ${c}`
+                                })) || []),
+                                { value: 'other', label: 'Other codec...' }
+                              ]}
+                              helperText="Select one or more audio codecs"
+                              required
+                            />
+                            
+                            {/* Show custom codec input only when "other" is selected */}
+                            {showCustomCodecInput[index] && (
+                              <Box sx={{ mt: 2 }}>
+                                <TextInput
+                                  id={`channel-${index}-add-codec`}
+                                  label="Add Custom Codec"
+                                  value={customCodecValues[index] || ''}
+                                  onChange={(value) => {
+                                    setCustomCodecValues(prev => ({ ...prev, [index]: value }));
+                                  }}
+                                  placeholder="Enter codec number(s) (e.g., 96 or 96,97,98)"
+                                  helperText="Add custom codec numbers - click button to add them"
+                                  size="small"
+                                />
+                                <Button
+                                  onClick={() => {
+                                    const value = customCodecValues[index];
+                                    if (value && value.trim()) {
+                                      const customCodecs = value.split(',').map(v => parseInt(v.trim())).filter(n => !isNaN(n) && n > 0);
+                                      
+                                      if (customCodecs.length > 0) {
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          sdp: {
+                                            ...prev.sdp,
+                                            channels: prev.sdp.channels.map((ch, i) => {
+                                              if (i === index) {
+                                                const existingCodecs = ch.codecs || [];
+                                                const newCodecs = [...existingCodecs];
+                                                
+                                                customCodecs.forEach(codec => {
+                                                  if (!newCodecs.includes(codec)) {
+                                                    newCodecs.push(codec);
+                                                  }
+                                                });
+                                                
+                                                return { ...ch, codecs: newCodecs };
+                                              }
+                                              return ch;
+                                            })
+                                          }
+                                        }));
+                                        
+                                        // Clear the input after adding
+                                        setCustomCodecValues(prev => ({ ...prev, [index]: '' }));
+                                      }
+                                    }
+                                  }}
+                                  variant="outlined"
+                                  size="small"
+                                  sx={{ mt: 1 }}
+                                >
+                                  Add Codec(s)
+                                </Button>
+                              </Box>
+                            )}
+                          </Box>
 
                           <TextInput
                             id={`channel-${index}-connectionAddress`}
@@ -1282,12 +1384,12 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                               mediaType: 'AUDIO',
                               port: 42000 + prev.sdp.channels.length * 2,
                               transportProtocol: 'RTP_AVP',
-                              codecs: [0, 8],
+                              codecs: [0, 8, 18],
                               connectionAddress: '',
                               label: '',
                               packetTime: 20,
                               maxPacketTime: 20,
-                              channelState: 'SEND_AND_RECEIVE',
+                              channelState: 'SEND',
                               attributes: {},
                             }
                           ]

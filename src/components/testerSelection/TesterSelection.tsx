@@ -15,7 +15,7 @@ interface TesterSelectionProps {
 
 const TESTER_CONFIGS = {
   'sip-tester': {
-    title: 'SIP Tester',
+    title: 'SIP functionality',
     description: 'Test Send/Receive SIP messages and query about these messages.',
     features: [
       'Manage your SIP testers',
@@ -24,7 +24,7 @@ const TESTER_CONFIGS = {
     ],
   },
   'rtp-tester': {
-    title: 'RTP Tester',
+    title: 'RTP functionality',
     description: 'Test Send/Receive RTP streams and query about these streams.',
     features: [
       'Manage your RTP testers',
@@ -33,7 +33,7 @@ const TESTER_CONFIGS = {
     ],
   },
   'media-tester': {
-    title: 'Media Tester',
+    title: 'RTP + SIP functionality',
     description: 'Send SIP messages and the tester will start stream rtp based on these messages, combined automatically the rtp tester into the sip tester',
     features: [
       'All the rtp tester and sip tester features',

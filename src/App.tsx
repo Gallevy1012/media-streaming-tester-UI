@@ -108,6 +108,7 @@ function TesterFormPage() {
     switch (testerType) {
       case 'sip-tester':
         switch (functionId) {
+          case 'create-tester':
           case 'create':
             return <CreateSipTesterForm onTestComplete={handleTestComplete} onBack={handleBack} />;
           case 'remove':
@@ -170,16 +171,6 @@ function App() {
                 
                 {/* Specific function form pages */}
                 <Route path="/:testerType/:functionId" element={<TesterFormPage />} />
-                
-                {/* Legacy SIP tester direct route for backward compatibility */}
-                <Route 
-                  path="/sip-tester/create-tester" 
-                  element={
-                    <Layout>
-                      <SipTestForm />
-                    </Layout>
-                  } 
-                />
               </Routes>
             </Router>
           </WizardProvider>

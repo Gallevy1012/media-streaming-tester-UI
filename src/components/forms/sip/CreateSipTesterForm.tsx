@@ -148,7 +148,7 @@ export const CreateSipTesterForm: React.FC<CreateSipTesterFormProps> = ({ onTest
           },
           mediaSourceType: formData.mediaSourceType,
           unsupportedCodecs: formData.unsupportedCodecs,
-          saveDialog: formData.saveDialog,
+          saveDialog: true,
           isStateless: formData.isStateless,
         };
 
@@ -199,16 +199,14 @@ export const CreateSipTesterForm: React.FC<CreateSipTesterFormProps> = ({ onTest
       <Paper elevation={2} sx={{ p: 3 }}>
         <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {onBack && (
-              <Button
-                variant="outlined"
-                onClick={onBack}
-                startIcon={<ArrowBackIcon />}
-                size="small"
-              >
-                Back
-              </Button>
-            )}
+            <Button
+              variant="outlined"
+              onClick={onBack || (() => window.history.back())}
+              startIcon={<ArrowBackIcon />}
+              size="small"
+            >
+              Back
+            </Button>
             <Typography variant="h5" component="h2">
               Create SIP Tester
             </Typography>
@@ -401,15 +399,6 @@ export const CreateSipTesterForm: React.FC<CreateSipTesterFormProps> = ({ onTest
                     />
                   }
                   label="Use Default Handlers"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={formData.saveDialog || false}
-                      onChange={(e) => handleInputChange('saveDialog')(e.target.checked)}
-                    />
-                  }
-                  label="Save Dialog"
                 />
                 <FormControlLabel
                   control={

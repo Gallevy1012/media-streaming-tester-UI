@@ -8,11 +8,11 @@ import {
   Collapse,
   IconButton,
 } from '@mui/material';
-import { 
+import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Security as SecurityIcon,
-  Logout as LogoutIcon 
+  Logout as LogoutIcon
 } from '@mui/icons-material';
 import { LoginForm } from '../auth/LoginForm';
 import { useAuth } from '../../hooks/useAuth';
@@ -49,8 +49,8 @@ export const PersistentAuthBox: React.FC = () => {
         <Box
           sx={{
             p: 2,
-            backgroundColor: authState.isAuthenticated 
-              ? 'success.main' 
+            backgroundColor: authState.isAuthenticated
+              ? 'success.main'
               : 'warning.main',
             color: 'white',
             display: 'flex',
@@ -66,13 +66,13 @@ export const PersistentAuthBox: React.FC = () => {
               {authState.isAuthenticated ? 'Authenticated' : 'Authentication'}
             </Typography>
           </Box>
-          
+
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {authState.isAuthenticated && (
               <Chip
                 label={authState.username || 'User'}
                 size="small"
-                sx={{ 
+                sx={{
                   backgroundColor: 'rgba(255,255,255,0.2)',
                   color: 'white',
                   fontSize: '0.75rem'
@@ -92,9 +92,6 @@ export const PersistentAuthBox: React.FC = () => {
               <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                   Environment: <strong>{authState.environment === 'dev' ? 'Dev' : authState.environment}</strong>
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Token expires: {authState.expirationTime?.toLocaleString() || 'Unknown'}
                 </Typography>
                 <Button
                   variant="outlined"

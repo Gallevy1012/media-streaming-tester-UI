@@ -29,7 +29,7 @@ const TESTER_FUNCTIONS: Record<TesterType, TesterFunction[]> = {
     //   id: 'create-tester',
     //   name: 'Create SIP Tester',
     //   description: 'Create a new SIP tester instance with custom configuration',
-    //   path: '/sip-tester/create',
+    //   path: '/sip-tester/create-tester',
     //   category: 'Manage Tester',
     // },
     // {
@@ -300,20 +300,15 @@ export const TesterFunctionSelection: React.FC<TesterFunctionSelectionProps> = (
         <Box sx={{ mb: 2 }}>
           {Object.entries(groupedFunctions).map(([category, funcs]) => (
             <Box key={category} sx={{ mb: 3 }}>
-              <Typography variant="h5" component="h2" sx={{ mb: 2, fontWeight: 600, color: 'primary.main' }}>
+              <Typography variant="h5" component="h2" sx={{ mb: 2, fontWeight: 600, color: 'primary.main', textAlign: 'center' }}>
                 {category}
               </Typography>
             <Box
               sx={{
-                display: 'grid',
-                gridTemplateColumns: {
-                  xs: '1fr',
-                  sm: 'repeat(2, 1fr)',
-                  md: 'repeat(3, 1fr)',
-                  lg: 'repeat(4, 1fr)',
-                  xl: 'repeat(5, 1fr)',
-                },
-                gap: 2, // Reduced gap for more cards to fit
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: 2,
                 minHeight: '200px',
               }}
             >
@@ -322,9 +317,17 @@ export const TesterFunctionSelection: React.FC<TesterFunctionSelectionProps> = (
                   key={func.id}
                   elevation={2}
                   sx={{
-                    p: 2, // Reduced padding for more compact cards
-                    minHeight: '160px', // Reduced minimum height for better fit
-                    display: 'flex',
+                    p: 2,
+                    minHeight: '160px',
+                    width: {
+                      xs: '100%',
+                      sm: '300px',
+                      md: '280px',
+                      lg: '260px',
+                      xl: '240px',
+                    },
+                    maxWidth: '300px',
+                    display: 'flex',  
                     flexDirection: 'column',
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',

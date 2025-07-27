@@ -19,6 +19,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { ProfileDialog } from '../auth';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -32,6 +33,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, breadcrumbs = [] }) =>
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [profileDialogOpen, setProfileDialogOpen] = React.useState(false);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -45,6 +47,15 @@ export const Layout: React.FC<LayoutProps> = ({ children, breadcrumbs = [] }) =>
     handleMenuClose();
     logout();
     // No navigation needed since we're on the same page with conditional rendering
+  };
+
+  const handleProfileClick = () => {
+    handleMenuClose();
+    setProfileDialogOpen(true);
+  };
+
+  const handleProfileClose = () => {
+    setProfileDialogOpen(false);
   };
 
   const handleBreadcrumbClick = (href: string) => {
@@ -83,7 +94,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, breadcrumbs = [] }) =>
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'right' }}
               >
-                <MenuItem onClick={handleMenuClose}>
+                <MenuItem onClick={handleProfileClick}>
                   <AccountIcon sx={{ mr: 1 }} />
                   Profile
                 </MenuItem>
@@ -169,10 +180,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, breadcrumbs = [] }) =>
       <Box component="footer" sx={{ bgcolor: 'grey.100', py: 2, mt: 'auto' }}>
         <Container maxWidth="lg">
           <Typography variant="body2" color="text.secondary" align="center">
-            © 2024 MS-Tester UI. Built for comprehensive communication testing.
+            © MS-Tester UI. Built for comprehensive communication testing.
           </Typography>
         </Container>
       </Box>
+
+      {/* Profile Dialog */}
+      <ProfileDialog 
+        open={profileDialogOpen} 
+        onClose={handleProfileClose} 
+      />
     </Box>
   );
 };

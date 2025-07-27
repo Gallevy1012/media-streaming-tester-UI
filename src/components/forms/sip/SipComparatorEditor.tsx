@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Box,
   Typography,
@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { ExpandMore as ExpandMoreIcon, Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { TextInput, Dropdown, NumberInput } from '../../common';
-import type { SipComparator, SipMethod, MediaSourceType, ChannelState, SdpDto, Origin, Connection, Channel } from '../../../types';
+import type { SipComparator, SdpDto, Origin, Connection, Channel } from '../../../types';
 
 interface SipComparatorEditorProps {
   value: SipComparator;
@@ -84,9 +84,7 @@ export const SipComparatorEditor: React.FC<SipComparatorEditorProps> = ({ value,
     { key: 'expected_CSeqNumber' as keyof SipComparator, label: 'Expected CSeq Number' },
     { key: 'expected_InteractionKey' as keyof SipComparator, label: 'Expected Interaction Key' },
     { key: 'actual_CallId' as keyof SipComparator, label: 'Actual Call ID' },
-  ];
-
-  const sequenceFields = [
+    // Combined sequence & timing fields into header fields
     { key: 'expected_NoToTag' as keyof SipComparator, label: 'Expected No To Tag' },
     { key: 'expected_NoFromTag' as keyof SipComparator, label: 'Expected No From Tag' },
     { key: 'expected_IsImrHeader' as keyof SipComparator, label: 'Expected Is IMR Header' },
@@ -683,7 +681,6 @@ export const SipComparatorEditor: React.FC<SipComparatorEditorProps> = ({ value,
       </Typography>
 
       {renderFieldGroup('Header Fields', headerFields)}
-      {renderFieldGroup('Sequence & Timing', sequenceFields)}
       {renderFieldGroup('SDP Fields', sdpFields)}
     </Box>
   );

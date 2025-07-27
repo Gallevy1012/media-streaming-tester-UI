@@ -185,7 +185,7 @@ export const MediaTestForm: React.FC<MediaFormProps> = ({ functionId, onTestComp
                   alias: formData.alias || '',
                 },
                 mediaSourceType: formData.mediaSourceType,
-                saveDialog: formData.saveDialog,
+                saveDialog: true,
                 isStateless: formData.isStateless,
                 imrRequesterId: formData.imrRequesterId || undefined,
               },
@@ -377,7 +377,7 @@ export const MediaTestForm: React.FC<MediaFormProps> = ({ functionId, onTestComp
               label="Channel SSRCs (comma-separated)"
               value={formData.channelSsrcs?.join(', ') || ''}
               onChange={handleInputChange('channelSsrcs')}
-              placeholder="12345, 67890"
+              placeholder="12345, 12346"
               helperText="Synchronization Source identifiers for channels (1-2 values)"
             />
 
@@ -396,15 +396,6 @@ export const MediaTestForm: React.FC<MediaFormProps> = ({ functionId, onTestComp
                 Additional Options
               </Typography>
               <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={formData.saveDialog}
-                      onChange={(e) => handleInputChange('saveDialog')(e.target.checked)}
-                    />
-                  }
-                  label="Save Dialog"
-                />
                 <FormControlLabel
                   control={
                     <Switch

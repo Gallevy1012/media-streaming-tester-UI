@@ -501,7 +501,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
               },
               mediaSourceType: formData.mediaSourceType || 'SIP',
               unsupportedCodecs: formData.unsupportedCodecs || [],
-              saveDialog: formData.saveDialog || false,
+              saveDialog: true,
               isStateless: formData.isStateless || false,
               imrRequesterId: formData.imrRequesterId || undefined,
             },
@@ -945,15 +945,6 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
                     Configuration Options
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={formData.saveDialog || false}
-                          onChange={(e) => handleInputChange('saveDialog')(e.target.checked)}
-                        />
-                      }
-                      label="Save Dialog"
-                    />
                     <FormControlLabel
                       control={
                         <Switch
