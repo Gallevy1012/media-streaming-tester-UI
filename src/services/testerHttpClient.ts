@@ -24,10 +24,10 @@ class TesterHttpClient {
 
         // Use proxy to avoid CORS issues: /api/media-streaming-tester/{tester}/{functionality}
         const proxyUrl = `/api/media-streaming-tester${config.url}`;
-        
+
         console.log('Making MS-Tester request via proxy to:', proxyUrl);
         console.log('Request data:', config.data);
-        
+
         config.url = proxyUrl;
         return config;
       },
@@ -44,13 +44,13 @@ class TesterHttpClient {
       },
       (error) => {
         console.error('MS-Tester request failed:', error);
-        
+
         if (error.response?.status === 401) {
           // Token expired or invalid
           localStorage.removeItem('auth_token');
           throw new Error('Authentication expired. Please login again.');
         }
-        
+
         // Format error message for user display
         let errorMessage = 'Request failed';
         if (error.response?.data) {
@@ -67,12 +67,12 @@ class TesterHttpClient {
         } else if (error.message) {
           errorMessage = error.message;
         }
-        
+
         // Create a new error with formatted message and include response data
         const formattedError = new Error(errorMessage);
         (formattedError as any).response = error.response;
         (formattedError as any).status = error.response?.status;
-        
+
         throw formattedError;
       }
     );

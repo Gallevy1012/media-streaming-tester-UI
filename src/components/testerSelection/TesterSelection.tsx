@@ -46,19 +46,63 @@ export const TesterSelection: React.FC<TesterSelectionProps> = ({
   onTesterSelect,
 }) => {
   return (
-    <Paper sx={{ p: 3 }}>
-      <Box mb={3}>
-        <Typography variant="h5" component="h2" gutterBottom>
-          Select Testing Module
+    <Paper 
+      sx={{ 
+        p: 4,
+        background: 'rgba(255, 255, 255, 0.9)',
+        backdropFilter: 'blur(10px)',
+        borderRadius: 3,
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+      }}
+    >
+      <Box mb={4}>
+        <Typography 
+          variant="h4" 
+          component="h2" 
+          gutterBottom
+          sx={{
+            fontWeight: 700,
+            textAlign: 'center',
+            background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            mb: 2,
+          }}
+        >
+          🔧 Select Testing Module
         </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Choose the type of test you want to perform. Each module provides specialized testing capabilities.
+        <Typography 
+          variant="body1" 
+          color="text.secondary"
+          sx={{ 
+            textAlign: 'center',
+            maxWidth: 600,
+            mx: 'auto',
+            lineHeight: 1.6,
+          }}
+        >
+          Choose the type of test you want to perform. Each module provides specialized testing capabilities 
+          with comprehensive monitoring and analytics.
         </Typography>
       </Box>
 
-      <Alert severity="info" sx={{ mb: 3 }}>
-        <Typography variant="body2">
-          Select a testing module to configure and run your tests. You can switch between modules at any time.
+      <Alert 
+        severity="info" 
+        sx={{ 
+          mb: 4,
+          borderRadius: 2,
+          background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(66, 165, 245, 0.05) 100%)',
+          border: '1px solid rgba(25, 118, 210, 0.2)',
+          '& .MuiAlert-icon': {
+            color: 'primary.main',
+          },
+        }}
+      >
+        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+          💡 <strong>Pro Tip:</strong> Select a testing module to configure and run your tests. 
+          You can switch between modules at any time during your testing session.
         </Typography>
       </Alert>
 
@@ -66,7 +110,8 @@ export const TesterSelection: React.FC<TesterSelectionProps> = ({
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
-          gap: 3
+          gap: 4,
+          mb: 4,
         }}
       >
         {(Object.keys(TESTER_CONFIGS) as TesterType[]).map((testerType) => (
@@ -83,10 +128,31 @@ export const TesterSelection: React.FC<TesterSelectionProps> = ({
       </Box>
 
       {selectedTester && (
-        <Alert severity="success" sx={{ mt: 3 }}>
-          <Typography variant="body2">
-            <strong>{TESTER_CONFIGS[selectedTester].title}</strong> selected.
-            Continue to the next step to configure your test parameters.
+        <Alert 
+          severity="success" 
+          sx={{ 
+            borderRadius: 2,
+            background: 'linear-gradient(135deg, rgba(46, 125, 50, 0.05) 0%, rgba(76, 175, 80, 0.05) 100%)',
+            border: '1px solid rgba(46, 125, 50, 0.2)',
+            '& .MuiAlert-icon': {
+              color: 'success.main',
+            },
+            animation: 'slideInUp 0.5s ease-out',
+            '@keyframes slideInUp': {
+              from: {
+                opacity: 0,
+                transform: 'translateY(20px)',
+              },
+              to: {
+                opacity: 1,
+                transform: 'translateY(0)',
+              },
+            },
+          }}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            ✅ <strong>{TESTER_CONFIGS[selectedTester].title}</strong> selected successfully!
+            Continue to the next step to configure your test parameters and begin testing.
           </Typography>
         </Alert>
       )}

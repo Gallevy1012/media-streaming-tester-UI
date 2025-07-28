@@ -13,6 +13,7 @@ import { AuthDialog } from '../../auth';
 import { ColoredJsonViewer } from '../../response';
 import { useAuthenticatedRequest } from '../../../hooks/useAuthenticatedRequest';
 import { useAuth } from '../../../hooks/useAuth';
+import { useTester } from '../../../contexts/TesterContext';
 import { sipTesterService } from '../../../services/sipTesterService';
 
 interface SendSipByeFormProps {
@@ -36,6 +37,7 @@ export const SendSipByeForm: React.FC<SendSipByeFormProps> = ({ onTestComplete, 
   const [result, setResult] = useState<any>(null);
 
   const { state: authState } = useAuth();
+  const { removeDialogId } = useTester();
   const { isAuthDialogOpen, closeAuthDialog, executeWithAuth } = useAuthenticatedRequest();
 
   const handleInputChange = (field: keyof SendSipByeFormData) => (value: string) => {
@@ -72,6 +74,13 @@ export const SendSipByeForm: React.FC<SendSipByeFormProps> = ({ onTestComplete, 
 
       if (testResult) {
         setResult(testResult);
+        
+        // If the BYE request was successful (response is ok), remove the dialog ID
+        // Check if the response indicates success (typically status 200 or success field)
+        if (testResult.success !== false && (!testResult.status || testResult.status === 200 || testResult.status < 400)) {
+          removeDialogId(formData.testerId.trim(), formData.dialogId.trim(), 'sip-tester');
+        }
+        
         onTestComplete?.(testResult);
       }
       

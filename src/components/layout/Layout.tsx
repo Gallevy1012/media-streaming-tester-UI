@@ -64,25 +64,63 @@ export const Layout: React.FC<LayoutProps> = ({ children, breadcrumbs = [] }) =>
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <AppBar position="static" elevation={1}>
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            MS-Tester UI
+      <AppBar 
+        position="static" 
+        elevation={0}
+        sx={{
+          background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+        }}
+      >
+        <Toolbar sx={{ minHeight: 64 }}>
+          <Typography 
+            variant="h5" 
+            component="div" 
+            sx={{ 
+              flexGrow: 1, 
+              fontWeight: 700,
+              letterSpacing: '-0.5px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            🚀 MS-Tester UI
           </Typography>
 
           {user && (
             <Box display="flex" alignItems="center" gap={2}>
-              <Typography variant="body2" color="inherit">
-                Welcome, {user.username}
-              </Typography>
+              <Box
+                sx={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: 2,
+                  px: 2,
+                  py: 0.5,
+                  backdropFilter: 'blur(10px)',
+                }}
+              >
+                <Typography 
+                  variant="body2" 
+                  color="inherit"
+                  sx={{ fontWeight: 500 }}
+                >
+                  Welcome, {user.username}
+                </Typography>
+              </Box>
               
               <IconButton
                 edge="end"
                 color="inherit"
                 onClick={handleMenuOpen}
                 aria-label="account menu"
+                sx={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  '&:hover': {
+                    background: 'rgba(255, 255, 255, 0.2)',
+                  },
+                }}
               >
-                <Avatar sx={{ width: 32, height: 32 }}>
+                <Avatar sx={{ width: 32, height: 32, bgcolor: 'rgba(255, 255, 255, 0.2)' }}>
                   <AccountIcon />
                 </Avatar>
               </IconButton>
@@ -93,12 +131,39 @@ export const Layout: React.FC<LayoutProps> = ({ children, breadcrumbs = [] }) =>
                 onClose={handleMenuClose}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                PaperProps={{
+                  sx: {
+                    borderRadius: 2,
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    mt: 1,
+                  },
+                }}
               >
-                <MenuItem onClick={handleProfileClick}>
+                <MenuItem 
+                  onClick={handleProfileClick}
+                  sx={{
+                    borderRadius: 1,
+                    mx: 1,
+                    mb: 0.5,
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.1) 0%, rgba(66, 165, 245, 0.1) 100%)',
+                    },
+                  }}
+                >
                   <AccountIcon sx={{ mr: 1 }} />
                   Profile
                 </MenuItem>
-                <MenuItem onClick={handleLogout}>
+                <MenuItem 
+                  onClick={handleLogout}
+                  sx={{
+                    borderRadius: 1,
+                    mx: 1,
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, rgba(211, 47, 47, 0.1) 0%, rgba(244, 67, 54, 0.1) 100%)',
+                    },
+                  }}
+                >
                   <LogoutIcon sx={{ mr: 1 }} />
                   Sign Out
                 </MenuItem>
@@ -107,17 +172,42 @@ export const Layout: React.FC<LayoutProps> = ({ children, breadcrumbs = [] }) =>
           )}
 
           {!user && (
-            <Typography variant="body2" color="inherit" sx={{ opacity: 0.7 }}>
-              Please sign in to access all features
-            </Typography>
+            <Box
+              sx={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: 2,
+                px: 2,
+                py: 0.5,
+                backdropFilter: 'blur(10px)',
+              }}
+            >
+              <Typography variant="body2" color="inherit" sx={{ opacity: 0.9 }}>
+                Please sign in to access all features
+              </Typography>
+            </Box>
           )}
         </Toolbar>
       </AppBar>
 
       {breadcrumbs.length > 0 && (
-        <Box sx={{ bgcolor: 'grey.100', py: 1 }}>
+        <Box sx={{ 
+          bgcolor: 'rgba(255, 255, 255, 0.9)', 
+          py: 1.5,
+          borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+          backdropFilter: 'blur(10px)',
+        }}>
           <Container maxWidth="lg">
-            <Breadcrumbs separator="›" aria-label="breadcrumb">
+            <Breadcrumbs 
+              separator="›" 
+              aria-label="breadcrumb"
+              sx={{
+                '& .MuiBreadcrumbs-separator': {
+                  mx: 1,
+                  color: 'primary.main',
+                  fontWeight: 'bold',
+                },
+              }}
+            >
               <Link
                 component="button"
                 variant="body2"
@@ -126,11 +216,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, breadcrumbs = [] }) =>
                   display: 'flex',
                   alignItems: 'center',
                   textDecoration: 'none',
-                  color: 'inherit',
-                  '&:hover': { textDecoration: 'underline' },
+                  color: 'primary.main',
+                  fontWeight: 500,
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': { 
+                    textDecoration: 'underline',
+                    transform: 'scale(1.02)',
+                  },
                 }}
               >
-                <HomeIcon sx={{ mr: 0.5, fontSize: 16 }} />
+                <HomeIcon sx={{ mr: 0.5, fontSize: 18 }} />
                 Home
               </Link>
               
@@ -143,7 +238,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, breadcrumbs = [] }) =>
                       key={index}
                       variant="body2"
                       color="text.primary"
-                      sx={{ fontWeight: isLast ? 600 : 400 }}
+                      sx={{ 
+                        fontWeight: isLast ? 600 : 400,
+                        opacity: isLast ? 1 : 0.7,
+                      }}
                     >
                       {crumb.label}
                     </Typography>
@@ -158,8 +256,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, breadcrumbs = [] }) =>
                     onClick={() => handleBreadcrumbClick(crumb.href!)}
                     sx={{
                       textDecoration: 'none',
-                      color: 'inherit',
-                      '&:hover': { textDecoration: 'underline' },
+                      color: 'primary.main',
+                      fontWeight: 500,
+                      transition: 'all 0.2s ease-in-out',
+                      '&:hover': { 
+                        textDecoration: 'underline',
+                        transform: 'scale(1.02)',
+                      },
                     }}
                   >
                     {crumb.label}
@@ -171,17 +274,28 @@ export const Layout: React.FC<LayoutProps> = ({ children, breadcrumbs = [] }) =>
         </Box>
       )}
 
-      <Box component="main" sx={{ flexGrow: 1, py: 3 }}>
-        <Container maxWidth="lg">
+      <Box 
+        component="main" 
+        sx={{ 
+          flexGrow: 1, 
+          background: 'transparent',
+        }}
+      >
+        <Container maxWidth="lg" sx={{ py: 0 }}>
           {children}
         </Container>
       </Box>
 
-      <Box component="footer" sx={{ bgcolor: 'grey.100', py: 2, mt: 'auto' }}>
+      <Box 
+        component="footer" 
+        sx={{ 
+          background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(66, 165, 245, 0.05) 100%)',
+          py: 3, 
+          mt: 'auto',
+          borderTop: '1px solid rgba(0, 0, 0, 0.06)',
+        }}
+      >
         <Container maxWidth="lg">
-          <Typography variant="body2" color="text.secondary" align="center">
-            © MS-Tester UI. Built for comprehensive communication testing.
-          </Typography>
         </Container>
       </Box>
 

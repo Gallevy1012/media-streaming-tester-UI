@@ -255,7 +255,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
   const [showCustomCodecInput, setShowCustomCodecInput] = useState<{[channelIndex: number]: boolean}>({});
 
   const { state: authState } = useAuth();
-  const { addTester, removeTesterByTesterId, addDialogId } = useTester();
+  const { addTester, removeTesterByTesterId, addDialogId, removeDialogId } = useTester();
   const { isAuthDialogOpen, closeAuthDialog, executeWithAuth } = useAuthenticatedRequest();
 
   const getFunctionTitle = () => {
@@ -880,6 +880,17 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
 
       if (testResult) {
         setResult(testResult);
+        
+        // If this was a send-bye request and it was successful, remove the dialog ID
+        if (functionId === 'send-bye' && 
+            testResult.success !== false && 
+            (!testResult.status || testResult.status === 200 || testResult.status < 400) &&
+            formData.mediaTesterId?.trim() && 
+            formData.dialogId?.trim()) {
+          
+          removeDialogId(formData.mediaTesterId.trim(), formData.dialogId.trim(), 'media-tester');
+        }
+        
         onTestComplete?.(testResult);
       }
 

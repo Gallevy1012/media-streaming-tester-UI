@@ -116,6 +116,47 @@ export const TextInput: React.FC<TextInputProps> = ({
         size={size}
         fullWidth={fullWidth}
         autoComplete={autoComplete}
+        sx={{
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 2,
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            background: 'rgba(255, 255, 255, 0.5)',
+            backdropFilter: 'blur(10px)',
+            '&:hover': {
+              background: 'rgba(255, 255, 255, 0.7)',
+              transform: 'translateY(-1px)',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+            },
+            '&.Mui-focused': {
+              background: 'rgba(255, 255, 255, 0.8)',
+              transform: 'translateY(-1px)',
+              boxShadow: '0 6px 30px rgba(25, 118, 210, 0.15)',
+              '& fieldset': {
+                borderWidth: 2,
+                borderColor: 'primary.main',
+              },
+            },
+            '&.Mui-error': {
+              '& fieldset': {
+                borderColor: 'error.main',
+              },
+            },
+          },
+          '& .MuiInputLabel-root': {
+            fontWeight: 500,
+            '&.Mui-focused': {
+              color: 'primary.main',
+              fontWeight: 600,
+            },
+          },
+          '& .MuiInputBase-input': {
+            fontSize: '0.95rem',
+            '&::placeholder': {
+              fontSize: '0.9rem',
+              opacity: 0.6,
+            },
+          },
+        }}
         InputProps={{
           startAdornment: startAdornmentWrapper,
           endAdornment: endAdornmentWithTooltip,
@@ -123,11 +164,25 @@ export const TextInput: React.FC<TextInputProps> = ({
       />
       
       {(error || helperText || showCharacterCount) && (
-        <FormHelperText component="div">
+        <FormHelperText 
+          component="div"
+          sx={{
+            mt: 0.75,
+            fontSize: '0.8rem',
+            fontWeight: error ? 500 : 400,
+          }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>{error || helperText}</span>
             {showCharacterCount && (
-              <span>{characterCount}</span>
+              <span style={{ 
+                fontSize: '0.75rem',
+                opacity: 0.7,
+                fontWeight: 500,
+                color: value.length === maxLength ? '#f44336' : 'text.secondary'
+              }}>
+                {characterCount}
+              </span>
             )}
           </div>
         </FormHelperText>

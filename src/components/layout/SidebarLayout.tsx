@@ -571,16 +571,91 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
     <Box sx={{ width: DRAWER_WIDTH, height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <Box sx={{
-        p: 0,
+        p: 2.5,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'flex-start',
+        justifyContent: 'space-between',
         borderBottom: 1,
-        borderColor: 'divider'
+        borderColor: 'divider',
+        background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.03) 0%, rgba(66, 165, 245, 0.06) 100%)',
+        position: 'relative',
+        overflow: 'hidden',
       }}>
-        <Typography variant="h6" component="h2">
-          Active Testers
-        </Typography>
+        {/* Background decoration */}
+        <Box sx={{
+          position: 'absolute',
+          top: -10,
+          left: -10,
+          width: 40,
+          height: 40,
+          background: 'radial-gradient(circle, rgba(25, 118, 210, 0.1) 0%, transparent 70%)',
+          borderRadius: '50%',
+          animation: 'pulse 3s infinite',
+        }} />
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, position: 'relative', zIndex: 1 }}>
+          <Box
+            sx={{
+              p: 1,
+              borderRadius: 2,
+              background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.1) 0%, rgba(66, 165, 245, 0.1) 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            🔧
+          </Box>
+          <Box>
+            <Typography 
+              variant="h6" 
+              component="h2"
+              sx={{
+                fontWeight: 700,
+                color: 'primary.main',
+                fontSize: '1.1rem',
+                lineHeight: 1.2,
+              }}
+            >
+              Active Testers
+            </Typography>
+            <Typography 
+              variant="caption" 
+              color="text.secondary"
+              sx={{ 
+                fontSize: '0.75rem',
+                opacity: 0.8,
+              }}
+            >
+              Manage your tester instances
+            </Typography>
+          </Box>
+        </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, position: 'relative', zIndex: 1 }}>
+          <Chip 
+            label={state.testers.length} 
+            color="primary" 
+            size="small"
+            sx={{ 
+              fontWeight: 600,
+              background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
+              color: 'white',
+              '& .MuiChip-label': {
+                fontSize: '0.8rem',
+              },
+            }}
+          />
+          {state.testers.length > 0 && (
+            <Box sx={{ 
+              width: 6, 
+              height: 6, 
+              borderRadius: '50%', 
+              backgroundColor: 'success.main',
+              animation: 'pulse 2s infinite',
+            }} />
+          )}
+        </Box>
       </Box>
 
       {/* Tester Categories with Collapsible Sections */}
