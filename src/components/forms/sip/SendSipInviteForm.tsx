@@ -12,6 +12,8 @@ import {
   TextField,
   Tabs,
   Tab,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import { Send as SendIcon, Security as SecurityIcon, ArrowBack as ArrowBackIcon, ExpandMore as ExpandMoreIcon, ContentCopy as ContentCopyIcon } from '@mui/icons-material';
 import { TextInput, Dropdown, NumberInput, MultiSelect } from '../../common';
@@ -77,6 +79,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
   const [activeTab, setActiveTab] = useState(0);
   const [rawInviteText, setRawInviteText] = useState('');
   const [parseError, setParseError] = useState<string | null>(null);
+  const [withCLine, setWithCLine] = useState(true);
   const [formData, setFormData] = useState<SendSipInviteFormData>({
     sipTesterId: '',
     destinationAddress: {
@@ -155,7 +158,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
       `o=${sdp.origin.userName} ${sdp.origin.sessionId} ${sdp.origin.sessionVersion} ${sdp.origin.networkType} ${sdp.origin.addressType} ${sdp.origin.ip}`,
       `s=${sdp.sessionName}`,
       sdp.sessionInformation ? `i=${sdp.sessionInformation}` : null,
-      `c=${sdp.connection.networkType} ${sdp.connection.addressType} ${sdp.connection.ip}`,
+      withCLine ? `c=${sdp.connection.networkType} ${sdp.connection.addressType} ${sdp.connection.ip}` : null,
       `t=${sdp.timing.startTime} ${sdp.timing.stopTime}`,
     ].filter(Boolean);
 
@@ -164,7 +167,12 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
       const codecs = channel.codecs || [];
       const payloadTypes = codecs.length > 0 ? codecs.join(' ') : '0';
       sdpContent.push(`m=${channel.mediaType} ${channel.port} RTP/AVP ${payloadTypes}`);
-      
+
+      if (channel.connectionAddress && channel.connectionAddress.trim()) {
+        // You can adjust addressType if you support IP6
+        sdpContent.push(`c=IN IP4 ${channel.connectionAddress.trim()}`);
+      }
+
       // Add basic codec attributes
       if (codecs.length > 0) {
         codecs.forEach((codec) => {
@@ -759,105 +767,11 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: { xs: '1fr', lg: '1fr 2.5fr' },
+                gridTemplateColumns: { xs: '1fr', lg: '3fr 2.5fr' },
                 gap: 3,
                 alignItems: 'start',
               }}
             >
-              {/* Left Column - SIP Message Preview */}
-              <Box sx={{ 
-                position: 'sticky', 
-                top: 0, 
-                height: 'fit-content',
-                display: { xs: 'none', lg: 'block' }
-              }}>
-                <Box sx={{ border: '2px solid #1976d2', borderRadius: 2, backgroundColor: '#fff' }}>
-                  <Box 
-                    sx={{ 
-                      backgroundColor: 'rgba(25, 118, 210, 0.1)',
-                      borderRadius: '8px 8px 0 0',
-                      p: 2,
-                      borderBottom: '1px solid #e0e0e0'
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <ContentCopyIcon fontSize="small" color="primary" />
-                      <Typography variant="h6" color="primary" sx={{ fontWeight: 600 }}>
-                        🔍 SIP INVITE Preview
-                      </Typography>
-                      <Chip
-                        label="Live"
-                        size="small"
-                        color="primary"
-                        variant="filled"
-                        sx={{ ml: 1, fontWeight: 500 }}
-                      />
-                    </Box>
-                  </Box>
-                  <Box sx={{ p: 2 }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Live preview of your SIP INVITE message. Values in [BRACKETS] are auto-generated.
-                    </Typography>
-                    <Paper
-                      sx={{
-                        p: 2,
-                        backgroundColor: '#fafafa',
-                        border: '1px solid #e0e0e0',
-                        borderRadius: 1,
-                        height: '60vh',
-                        overflow: 'auto',
-                        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)',
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                          Generated Message
-                        </Typography>
-                        <Box
-                          component="span"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigator.clipboard.writeText(generateSipInvitePreview());
-                          }}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.5,
-                            fontSize: '0.75rem',
-                            color: 'primary.main',
-                            cursor: 'pointer',
-                            padding: '4px 8px',
-                            borderRadius: 1,
-                            backgroundColor: '#fff',
-                            border: '1px solid #e0e0e0',
-                            '&:hover': {
-                              backgroundColor: 'primary.main',
-                              color: 'white',
-                            }
-                          }}
-                        >
-                          <ContentCopyIcon fontSize="small" />
-                          Copy
-                        </Box>
-                      </Box>
-                      <Typography
-                        component="pre"
-                        sx={{
-                          fontFamily: 'monospace',
-                          fontSize: '0.75rem',
-                          lineHeight: 1.3,
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-all',
-                          margin: 0,
-                          color: '#333',
-                        }}
-                      >
-                        {generateSipInvitePreview()}
-                      </Typography>
-                    </Paper>
-                  </Box>
-                </Box>
-              </Box>
 
               {/* Right Column - Form Fields */}
               <Box
@@ -1132,12 +1046,26 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                 </AccordionDetails>
               </Accordion>
 
-              {/* Connection Accordion */}
-              <Accordion sx={{ mt: 1 }}>
+
+
+                <Accordion sx={{ mt: 1 }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Typography variant="subtitle1">Connection Configuration</Typography>
                 </AccordionSummary>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={withCLine}
+                        onChange={(_, checked) => setWithCLine(checked)}
+                        color="primary"
+                      />
+                    }
+                    label="With C-line on the top (Connection Information)"
+                    sx={{ mb: 2 }}
+                  />
+                  {withCLine && (
                 <AccordionDetails>
+
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <Dropdown
                       id="connection-networkType"
@@ -1162,7 +1090,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
 
                     <Dropdown
                       id="connection-addressType"
-                      label="Address Type"
+                      label="Address Type (Optional)"
                       value={formData.sdp.connection.addressType}
                       onChange={(value) => setFormData(prev => ({
                         ...prev,
@@ -1178,13 +1106,12 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                         { value: 'IP4', label: 'IPv4' },
                         { value: 'IP6', label: 'IPv6' }
                       ]}
-                      required
-                      helperText="IP address type"
+                      helperText="IP address type (Optional, defaults to IPv4 if not specified)"
                     />
 
                     <TextInput
                       id="connection-ip"
-                      label="Connection IP"
+                      label="Connection IP (Optional)"
                       value={formData.sdp.connection.ip}
                       onChange={(value) => setFormData(prev => ({
                         ...prev,
@@ -1197,12 +1124,12 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                         }
                       }))}
                       placeholder="127.0.0.1"
-                      helperText="Connection IP address"
-                      required
+                      helperText="Connection IP address (Optional)"
                     />
                   </Box>
-                </AccordionDetails>
+                </AccordionDetails>)}
               </Accordion>
+
 
               {/* Timing Accordion */}
               <Accordion sx={{ mt: 1 }}>
@@ -1655,7 +1582,103 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
             </Box>
           </Box>
 
-<Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gridColumn: { xs: '1 / -1' } }}>
+              {/* Left Column - SIP Message Preview */}
+              <Box sx={{
+                position: 'sticky',
+                top: 0,
+                height: 'fit-content',
+                display: { xs: 'none', lg: 'block' }
+              }}>
+                <Box sx={{ border: '2px solid #1976d2', borderRadius: 2, backgroundColor: '#fff' }}>
+                  <Box
+                    sx={{
+                      backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                      borderRadius: '8px 8px 0 0',
+                      p: 2,
+                      borderBottom: '1px solid #e0e0e0'
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <ContentCopyIcon fontSize="small" color="primary" />
+                      <Typography variant="h6" color="primary" sx={{ fontWeight: 600 }}>
+                        🔍 SIP INVITE Preview
+                      </Typography>
+                      <Chip
+                        label="Live"
+                        size="small"
+                        color="primary"
+                        variant="filled"
+                        sx={{ ml: 1, fontWeight: 500 }}
+                      />
+                    </Box>
+                  </Box>
+                  <Box sx={{ p: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Live preview of your SIP INVITE message. Values in [BRACKETS] are auto-generated.
+                    </Typography>
+                    <Paper
+                      sx={{
+                        p: 2,
+                        backgroundColor: '#fafafa',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: 1,
+                        height: '60vh',
+                        overflow: 'auto',
+                        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                          Generated Message
+                        </Typography>
+                        <Box
+                          component="span"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(generateSipInvitePreview());
+                          }}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            fontSize: '0.75rem',
+                            color: 'primary.main',
+                            cursor: 'pointer',
+                            padding: '4px 8px',
+                            borderRadius: 1,
+                            backgroundColor: '#fff',
+                            border: '1px solid #e0e0e0',
+                            '&:hover': {
+                              backgroundColor: 'primary.main',
+                              color: 'white',
+                            }
+                          }}
+                        >
+                          <ContentCopyIcon fontSize="small" />
+                          Copy
+                        </Box>
+                      </Box>
+                      <Typography
+                        component="pre"
+                        sx={{
+                          fontFamily: 'monospace',
+                          fontSize: '0.75rem',
+                          lineHeight: 1.3,
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-all',
+                          margin: 0,
+                          color: '#333',
+                        }}
+                      >
+                        {generateSipInvitePreview()}
+                      </Typography>
+                    </Paper>
+                  </Box>
+                </Box>
+              </Box>
+
+
+              <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gridColumn: { xs: '1 / -1' } }}>
             <Button
               type="submit"
               variant="contained"

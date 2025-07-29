@@ -300,7 +300,7 @@ export interface QueryResponse {
 }
 
 export interface StreamedPacketsCountRequest {
-  rtpTesterId: string;
+  testerId: string;
   ssrcs: number[];
   interactionKey: string;
 }
