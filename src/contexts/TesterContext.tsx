@@ -58,7 +58,6 @@ function testerReducer(state: TesterState, action: TesterAction): TesterState {
   switch (action.type) {
     case 'ADD_TESTER': {
       const { type, details, interactionKey, requestId, rtpTesterId, sipTesterId, mediaTesterId, senderId, operation , alias } = action.payload;
-      console.log('TesterContext: Adding tester', { type, rtpTesterId, sipTesterId, mediaTesterId, senderId, operation });
       const newCounter = state.counters[type] + 1;
       const newTester: TesterInstance = {
         id: `${type}-${newCounter}`,
@@ -75,7 +74,6 @@ function testerReducer(state: TesterState, action: TesterAction): TesterState {
         operation,
         dialogIds: type === 'sip-tester' ? [] : undefined,
       };
-      console.log('TesterContext: Created new tester', newTester);
 
       const newState = {
         ...state,
@@ -85,7 +83,6 @@ function testerReducer(state: TesterState, action: TesterAction): TesterState {
           [type]: newCounter,
         },
       };
-      console.log('TesterContext: New state', newState);
 
       // Save to localStorage
       localStorage.setItem('tester-instances', JSON.stringify(newState));

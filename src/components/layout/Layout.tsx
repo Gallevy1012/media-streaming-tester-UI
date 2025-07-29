@@ -85,7 +85,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, breadcrumbs = [] }) =>
               gap: 1,
             }}
           >
-            🚀 MS-Tester UI
+            🚀 MS-Tester 
           </Typography>
 
           {user && (

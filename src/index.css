@@ -5,9 +5,9 @@
 
   color-scheme: light;
   color: rgba(0, 0, 0, 0.87);
-  background: linear-gradient(135deg, 
-    #f8faff 0%, 
-    #e3f2fd 50%, 
+  background: linear-gradient(135deg,
+    #f8faff 0%,
+    #e3f2fd 50%,
     #f1f8e9 100%);
 
   font-synthesis: none;
@@ -131,22 +131,22 @@ button:disabled {
 }
 
 @keyframes slideUp {
-  from { 
+  from {
     opacity: 0;
     transform: translateY(20px);
   }
-  to { 
+  to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
 @keyframes scaleIn {
-  from { 
+  from {
     opacity: 0;
     transform: scale(0.9);
   }
-  to { 
+  to {
     opacity: 1;
     transform: scale(1);
   }
@@ -168,9 +168,9 @@ button:disabled {
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
-    background: linear-gradient(135deg, 
-      #f8faff 0%, 
-      #e3f2fd 50%, 
+    background: linear-gradient(135deg,
+      #f8faff 0%,
+      #e3f2fd 50%,
       #f1f8e9 100%);
   }
   a:hover {
@@ -197,11 +197,11 @@ button:disabled {
   body {
     font-size: 14px;
   }
-  
+
   h1 {
     font-size: 2.5em;
   }
-  
+
   button {
     padding: 0.75em 1em;
     font-size: 0.9em;

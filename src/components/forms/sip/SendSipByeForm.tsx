@@ -63,7 +63,6 @@ export const SendSipByeForm: React.FC<SendSipByeFormProps> = ({ onTestComplete, 
           throw new Error('Dialog ID is required');
         }
 
-        // TODO: Implement sendBye in sipTesterService
         const response = await sipTesterService.sendBye({
           testerId: formData.testerId.trim(),
           dialogId: formData.dialogId.trim()

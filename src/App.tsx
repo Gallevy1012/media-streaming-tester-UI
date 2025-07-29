@@ -5,6 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider } from './contexts/AuthContext';
 import { TesterProvider } from './contexts/TesterContext';
 import { WizardProvider } from './contexts/WizardContext';
+import { ToastProvider } from './contexts/ToastContext';
 import { Layout, SidebarLayout } from './components/layout';
 import { TesterSelection, TesterFunctionSelection } from './components/testerSelection';
 import { SipTestForm, CreateSipTesterForm, RemoveSipTesterForm, SendSipInviteForm, SendSipByeForm } from './components/forms/sip';
@@ -398,7 +399,7 @@ function MainPage() {
               zIndex: 1,
             }}
           >
-            🚀 MS-Tester UI
+            🚀 MS-Tester
           </Typography>
           <Typography 
             variant="h5" 
@@ -511,7 +512,7 @@ function MainPage() {
               WebkitTextFillColor: 'transparent',
             }}
           >
-            ✨ Why Choose MS-Tester UI?
+            ✨ Why Choose MS-Tester ?
           </Typography>
           <Box sx={{ 
             display: 'grid', 
@@ -862,24 +863,26 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider>
-        <TesterProvider>
-          <WizardProvider>
-            <Router>
-              <Routes>
-                <Route path="/" element={<MainPage />} />
-                <Route path="/dashboard" element={<MainPage />} />
-                
-                {/* Tester function selection pages */}
-                <Route path="/:testerType" element={<TesterFunctionsPage />} />
-                
-                {/* Specific function form pages */}
-                <Route path="/:testerType/:functionId" element={<TesterFormPage />} />
-              </Routes>
-            </Router>
-          </WizardProvider>
-        </TesterProvider>
-      </AuthProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <TesterProvider>
+            <WizardProvider>
+              <Router>
+                <Routes>
+                  <Route path="/" element={<MainPage />} />
+                  <Route path="/dashboard" element={<MainPage />} />
+                  
+                  {/* Tester function selection pages */}
+                  <Route path="/:testerType" element={<TesterFunctionsPage />} />
+                  
+                  {/* Specific function form pages */}
+                  <Route path="/:testerType/:functionId" element={<TesterFormPage />} />
+                </Routes>
+              </Router>
+            </WizardProvider>
+          </TesterProvider>
+        </AuthProvider>
+      </ToastProvider>
     </ThemeProvider>
   );
 }

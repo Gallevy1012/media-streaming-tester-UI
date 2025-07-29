@@ -381,19 +381,14 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
 
       // Parse SDP section
       if (sdpLines.length > 0) {
-        console.log('MediaTestForm - SDP Lines found:', sdpLines.length);
-        console.log('MediaTestForm - SDP Lines:', sdpLines);
         const sdpParsed = parseSdpSection(sdpLines);
-        console.log('MediaTestForm - SDP Parsed result:', sdpParsed);
         if (sdpParsed) {
           parsed.sdp = { ...parsed.sdp!, ...sdpParsed };
-          console.log('MediaTestForm - Final parsed SDP:', parsed.sdp);
         }
       }
 
       return parsed;
     } catch (error) {
-      console.error('SIP parsing error:', error);
       setParseError(`Failed to parse SIP INVITE: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return null;
     }
@@ -401,8 +396,6 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
 
   // SDP parsing function (for send-invite function)
   const parseSdpSection = (sdpLines: string[]) => {
-    console.log('=== MediaTestForm SDP PARSING START ===');
-    console.log('Input SDP lines:', sdpLines);
     
     const sdp: any = {
       sessionVersion: 0,
@@ -431,8 +424,6 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
     let channelCount = 0;
 
     for (const line of sdpLines) {
-      console.log('MediaTestForm - Processing SDP line:', line);
-      
       if (line.startsWith('v=')) {
         sdp.sessionVersion = parseInt(line.substring(2));
       } else if (line.startsWith('o=')) {
@@ -471,15 +462,12 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
         }
       } else if (line.startsWith('m=')) {
         // Parse media: m=audio 6304 RTP/AVP 0 8 18 127
-        console.log('MediaTestForm - *** FOUND NEW MEDIA LINE ***:', line);
         const parts = line.substring(2).split(' ');
-        console.log('MediaTestForm - Media line parts:', parts);
         
         if (parts.length >= 3) {
           // Save previous channel if exists
           if (currentChannel) {
             channelCount++;
-            console.log(`MediaTestForm - Saving channel #${channelCount}:`, currentChannel);
             sdp.channels.push(currentChannel);
           }
           
@@ -493,9 +481,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
           
           // Extract codecs (numbers after transport protocol) - THIS IS KEY!
           const codecParts = parts.slice(3); // Get everything after transport protocol
-          console.log('MediaTestForm - Codec parts from m= line:', codecParts);
           const codecs = codecParts.map(codec => parseInt(codec)).filter(codec => !isNaN(codec));
-          console.log('MediaTestForm - Parsed codecs:', codecs);
           
           currentChannel = {
             mediaType: parts[0].toUpperCase(),
@@ -509,7 +495,6 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
             maxPacketTime: 20,
             channelState: 'SEND',
           };
-          console.log('MediaTestForm - Created new channel:', currentChannel);
         }
       } else if (line.startsWith('a=')) {
         // Parse attributes
@@ -547,14 +532,8 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
     // Add the last channel
     if (currentChannel) {
       channelCount++;
-      console.log(`MediaTestForm - Adding final channel #${channelCount}:`, currentChannel);
       sdp.channels.push(currentChannel);
     }
-
-    console.log('=== MediaTestForm FINAL PARSING RESULT ===');
-    console.log('Total channels created:', sdp.channels.length);
-    console.log('All channels:', sdp.channels);
-    console.log('=== MediaTestForm SDP PARSING END ===');
 
     // Filter out invalid channels (those without proper mediaType or port)
     const validChannels = sdp.channels.filter((channel: any) => 
@@ -564,7 +543,6 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
       channel.transportProtocol
     );
 
-    console.log('MediaTestForm - Channels after filtering:', validChannels.length, validChannels);
     sdp.channels = validChannels;
 
     return sdp;
@@ -590,11 +568,6 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
           channels: parsed.sdp.channels || []
         } : prev.sdp,
       }));
-      
-      // Debug log to help identify channel duplication
-      console.log('Parsed SDP:', parsed.sdp);
-      console.log('Parsed channels count:', parsed.sdp?.channels?.length || 0);
-      console.log('Parsed channels:', parsed.sdp?.channels);
       
       setActiveTab(0); // Switch to manual form tab
       setParseError(null);
@@ -895,7 +868,6 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
       }
 
     } catch (error: any) {
-      console.error('Media Test Form Error:', error);
       setError(error.message || 'An unexpected error occurred');
     } finally {
       setIsLoading(false);

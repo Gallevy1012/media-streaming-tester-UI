@@ -15,7 +15,7 @@ interface TesterFunction {
   name: string;
   description: string;
   path: string;
-  category?: string; // Add category field
+  category?: string;
 }
 
 interface TesterFunctionSelectionProps {
@@ -25,20 +25,6 @@ interface TesterFunctionSelectionProps {
 
 const TESTER_FUNCTIONS: Record<TesterType, TesterFunction[]> = {
   'sip-tester': [
-    // {
-    //   id: 'create-tester',
-    //   name: 'Create SIP Tester',
-    //   description: 'Create a new SIP tester instance with custom configuration',
-    //   path: '/sip-tester/create-tester',
-    //   category: 'Manage Tester',
-    // },
-    // {
-    //   id: 'remove-tester',
-    //   name: 'Remove SIP Tester',
-    //   description: 'Remove an existing SIP tester instance',
-    //   path: '/sip-tester/remove',
-    //   category: 'Manage Tester',
-    // },
     {
       id: 'send-invite',
       name: 'Send INVITE',
@@ -53,15 +39,6 @@ const TESTER_FUNCTIONS: Record<TesterType, TesterFunction[]> = {
       path: '/sip-tester/send-bye',
       category: 'Send SIP Message',
     },
-    // {
-    //   id: 'send-cancel',
-    //   name: 'Send CANCEL',
-    //   description: 'Cancel an ongoing SIP transaction',
-    //   method: 'POST',
-    //   complexity: 2,
-    //   path: '/sip-tester/send-cancel',
-    //   category: 'Send SIP Message',
-    // },
     {
       id: 'got-incoming-requests',
       name: 'Query Incoming Requests',
@@ -99,27 +76,6 @@ const TESTER_FUNCTIONS: Record<TesterType, TesterFunction[]> = {
     },
   ],
   'rtp-tester': [
-    // {
-    //   id: 'open-receiving-points',
-    //   name: 'Open Receiving Points',
-    //   description: 'Open RTP receiving points for stream analysis',
-    //   path: '/rtp-tester/open-receiving-points',
-    //   category: 'Manage Tester',
-    // },
-    // {
-    //   id: 'start-stream',
-    //   name: 'Start RTP Stream',
-    //   description: 'Start sending RTP stream with specified configuration',
-    //   path: '/rtp-tester/start-stream',
-    //   category: 'Manage Tester',
-    // },
-    // {
-    //   id: 'remove-rtp-tester',
-    //   name: 'Remove RTP Tester',
-    //   description: 'Remove an existing RTP tester instance',
-    //   path: '/rtp-tester/remove-rtp-tester',
-    //   category: 'Manage Tester',
-    // },
     {
       id: 'update-sender-destination',
       name: 'Update Sender Destination',
@@ -157,20 +113,6 @@ const TESTER_FUNCTIONS: Record<TesterType, TesterFunction[]> = {
     },
   ],
   'media-tester': [
-    // {
-    //   id: 'create-media-tester',
-    //   name: 'Create Media Tester',
-    //   description: 'Create a new media tester instance',
-    //   path: '/media-tester/create',
-    //   category: 'Manage Tester',
-    // },
-    // {
-    //   id: 'remove-media-tester',
-    //   name: 'Remove Media Tester',
-    //   description: 'Remove an existing media tester instance',
-    //   path: '/media-tester/remove',
-    //   category: 'Manage Tester',
-    // },
     {
       id: 'send-invite',
       name: 'Send INVITE',
@@ -343,19 +285,6 @@ export const TesterFunctionSelection: React.FC<TesterFunctionSelectionProps> = (
                     <Typography variant="h6" component="h3" sx={{ fontWeight: 600, flexGrow: 1, mr: 2 }}>
                       {func.name}
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column', alignItems: 'end', flexShrink: 0 }}>
-                      {/* <Chip
-                        label={func.method}
-                        color={getMethodColor(func.method) as any}
-                        size="small"
-                        variant="outlined"
-                      />
-                      <Chip
-                        label={getComplexityLabel(func.complexity)}
-                        color={getComplexityColor(func.complexity) as any}
-                        size="small"
-                      /> */}
-                    </Box>
                   </Box>
 
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2, flexGrow: 1 }}>

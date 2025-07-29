@@ -19,14 +19,64 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const initialState: AuthState = {
-  isAuthenticated: false,
-  token: null,
-  environment: 'Dev',
-  expirationTime: null,
-  user: null,
-  loginResponse: null,
+const loadStateFromStorage = (): AuthState => {
+  const defaultState: AuthState = {
+    isAuthenticated: false,
+    token: null,
+    environment: 'Dev',
+    expirationTime: null,
+    user: null,
+    loginResponse: null,
+    error: null,
+  };
+
+  try {
+    const savedToken = localStorage.getItem('auth_token');
+    const savedExpirationTime = localStorage.getItem('auth_expiration');
+    const savedUsername = localStorage.getItem('auth_username');
+    const savedEnvironment = localStorage.getItem('auth_environment') as Environment;
+    const savedLoginResponse = localStorage.getItem('auth_login_response');
+
+    if (savedToken && savedExpirationTime && savedUsername) {
+      const expirationTime = new Date(savedExpirationTime);
+      // Check if token is still valid
+      if (expirationTime > new Date()) {
+        return {
+          isAuthenticated: true,
+          token: savedToken,
+          environment: savedEnvironment || 'Dev',
+          expirationTime,
+          user: {
+            username: savedUsername,
+            environment: savedEnvironment || 'Dev',
+          },
+          username: savedUsername,
+          loginResponse: savedLoginResponse ? JSON.parse(savedLoginResponse) : null,
+          error: null,
+        };
+      } else {
+        // Token expired, clear storage
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_expiration');
+        localStorage.removeItem('auth_username');
+        localStorage.removeItem('auth_environment');
+        localStorage.removeItem('auth_login_response');
+      }
+    }
+  } catch (error) {
+    console.warn('Error loading auth state from localStorage:', error);
+    // Clear potentially corrupted data
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_expiration');
+    localStorage.removeItem('auth_username');
+    localStorage.removeItem('auth_environment');
+    localStorage.removeItem('auth_login_response');
+  }
+
+  return defaultState;
 };
+
+const initialState: AuthState = loadStateFromStorage();
 
 type AuthAction =
   | { type: 'LOGIN_START' }
@@ -43,22 +93,46 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
         isAuthenticated: false,
       };
     case 'LOGIN_SUCCESS':
-      // Store token in localStorage for testerHttpClient
-      console.log('Login successful:', action.payload);
+      try {
+        // Validate that expirationTime is a valid Date object
+        if (!action.payload.expirationTime || !(action.payload.expirationTime instanceof Date) || isNaN(action.payload.expirationTime.getTime())) {
+          console.error('Invalid expiration time received:', action.payload.expirationTime);
+          return {
+            ...state,
+            isAuthenticated: false,
+            error: 'Invalid token expiration time',
+          };
+        }
 
-      return {
-        ...state,
-        isAuthenticated: true,
-        token: action.payload.token,
-        expirationTime: action.payload.expirationTime,
-        username: action.payload.username,
-        environment: action.payload.environment,
-        loginResponse: action.payload.loginResponse,
-        user: {
+        // Store token in localStorage for persistence
+        localStorage.setItem('auth_token', action.payload.token);
+        localStorage.setItem('auth_expiration', action.payload.expirationTime.toISOString());
+        localStorage.setItem('auth_username', action.payload.username);
+        localStorage.setItem('auth_environment', action.payload.environment);
+        localStorage.setItem('auth_login_response', JSON.stringify(action.payload.loginResponse));
+
+        return {
+          ...state,
+          isAuthenticated: true,
+          token: action.payload.token,
+          expirationTime: action.payload.expirationTime,
           username: action.payload.username,
           environment: action.payload.environment,
-        },
-      };
+          loginResponse: action.payload.loginResponse,
+          user: {
+            username: action.payload.username,
+            environment: action.payload.environment,
+          },
+          error: null,
+        };
+      } catch (error) {
+        console.error('Error in LOGIN_SUCCESS:', error);
+        return {
+          ...state,
+          isAuthenticated: false,
+          error: 'Failed to process login response',
+        };
+      }
     case 'LOGIN_FAILURE':
       return {
         ...state,
@@ -67,10 +141,15 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
         expirationTime: null,
         username: undefined,
         user: null,
+        error: null,
       };
     case 'LOGOUT':
-      // Clear token from localStorage
+      // Clear all auth data from localStorage
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_expiration');
+      localStorage.removeItem('auth_username');
+      localStorage.removeItem('auth_environment');
+      localStorage.removeItem('auth_login_response');
 
       return {
         ...initialState,
@@ -97,14 +176,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       const response = await authService.login(credentials);
 
-      // Calculate expiration time
+      // Calculate expiration time using the correct field from the API response
       const expirationTime = new Date();
-      expirationTime.setSeconds(expirationTime.getSeconds() + response.expires_in);
+      const tokenExpirationSec = response.tokenExpirationTimeSec || response.expires_in || 3600; // fallback to 1 hour
+      expirationTime.setSeconds(expirationTime.getSeconds() + tokenExpirationSec);
+
+      // Validate that we have a valid date
+      if (isNaN(expirationTime.getTime())) {
+        console.error('Invalid expiration time:', tokenExpirationSec);
+        throw new Error('Invalid token expiration time received from server');
+      }
 
       dispatch({
         type: 'LOGIN_SUCCESS',
         payload: {
-          token: response.access_token,
+          token: response.token || response.access_token || '', // Use the correct token field with fallback
           expirationTime,
           username: credentials.email,
           environment: credentials.environment,

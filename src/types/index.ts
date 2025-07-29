@@ -12,6 +12,7 @@ export interface AuthState {
   username?: string;
   user?: User | null;
   loginResponse?: AuthResponse | null;
+  error?: string | null;
 }
 
 export type Environment = 'Dev' | 'test' | 'perf-wcx';
@@ -23,9 +24,19 @@ export interface LoginCredentials {
 }
 
 export interface AuthResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
+  access_token?: string; // Keep for backward compatibility
+  token: string; // The actual token field from the API
+  token_type?: string;
+  expires_in?: number; // Keep for backward compatibility
+  tokenExpirationTimeSec: number; // The actual expiration field from the API
+  refreshToken: string;
+  refreshTokenExpirationTimeSec: number;
+  user: {
+    id: string;
+    username: string;
+    email: string;
+    roles?: string[];
+  };
 }
 
 // Tester Types

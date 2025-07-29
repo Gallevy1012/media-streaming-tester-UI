@@ -31,8 +31,6 @@ class AuthService {
         timeout: 10000,
       });
 
-      console.log('Login response:', response.data);
-
       // Store the token for tester requests
       if (response.data.token) {
         localStorage.setItem('auth_token', response.data.token);

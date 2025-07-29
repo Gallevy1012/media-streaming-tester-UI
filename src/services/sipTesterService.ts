@@ -7,7 +7,7 @@ import type {
   SendCancelRequest,
   QueryIncomingRequestsParams,
   GetDialogDetailsParams,
-  SipQueryRequest, SipQueryListRequest,
+  SipQueryListRequest,
 } from '../types';
 
 // Import the tester context to add/remove testers from the list
@@ -38,11 +38,9 @@ class SipTesterService {
       // Add tester to list automatically only on success
       if (response && addTesterFunction) {
         const sipTesterId = (response as any).sipTesterId || (response as any).testerId || (response as any).id || `sip-${Date.now()}`;
-        console.log('SIP TESTER CREATE: Setting sipTesterId to:', sipTesterId, 'from response:', response);
         // Use the requestId provided by the user in the request
         const requestId = request.requestId || `req-sip-${Date.now()}`;
         const alias = (response as any).alias;
-        console.log('SIP TESTER CREATE: Calling addTester with:', { sipTesterId, requestId , alias});
         addTesterFunction('sip-tester', response, {
           sipTesterId: sipTesterId,
           requestId: requestId,
@@ -79,7 +77,6 @@ class SipTesterService {
 
       // Extract dialogId from response and add it to the tester's dialog list
       if (response && (response as any).dialogId && addDialogIdFunction) {
-        console.log('Adding dialog ID:', (response as any).dialogId, 'to tester:', request.testerId);
         addDialogIdFunction(request.testerId, (response as any).dialogId);
       }
 
@@ -125,7 +122,6 @@ class SipTesterService {
   async getDialogDetails(params: GetDialogDetailsParams): Promise<any> {
     try {
       const url = `/sip-tester/dialog-details`;
-      console.log('Getting dialog details for:', params);
       return await testerHttpClient.post(url, params );
     } catch (error) {
       throw error;

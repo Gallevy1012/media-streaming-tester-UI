@@ -36,14 +36,18 @@ export const PersistentAuthBox: React.FC = () => {
 
   return (
     <Box
+      className="no-page-transition"
       sx={{
         position: 'fixed',
         top: { xs: 10, sm: 20 },
         left: { xs: 10, sm: 20 },
-        zIndex: 1000,
+        zIndex: 1300, // Higher z-index to ensure it stays above other components
         maxWidth: { xs: 'calc(100vw - 20px)', sm: 380 },
         minWidth: { xs: 280, sm: 320 },
         width: { xs: 'calc(100vw - 20px)', sm: 'auto' },
+        // Prevent any layout shifts
+        transform: 'translateZ(0)', // Force hardware acceleration
+        willChange: 'auto',
       }}
     >
       <Paper 

@@ -49,11 +49,6 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; tester?: TesterInstance }>({ open: false });
   const [removeAllDialog, setRemoveAllDialog] = useState<{ open: boolean; type?: TesterType }>({ open: false });
   const [isDeleting, setIsDeleting] = useState(false);
-  const [ setNotification] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false,
-    message: '',
-    severity: 'success'
-  });
 
   const { state, removeTester } = useTester();
   const navigate = useNavigate();
@@ -78,11 +73,6 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
 
   const handleMediaTesterRemoval = async (tester: TesterInstance) => {
     if (!tester.mediaTesterId && !tester.details?.mediaTesterId) {
-      setNotification({
-        open: true,
-        message: 'Cannot remove media tester: Media Tester ID not found',
-        severity: 'error'
-      });
       return;
     }
 
@@ -93,28 +83,13 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
       // Import the mediaTesterService dynamically to avoid circular imports
       const { mediaTesterService } = await import('../../services/mediaTesterService');
 
-      const response = await mediaTesterService.removeMediaTester({
+      await mediaTesterService.removeMediaTester({
         requestId: requestId,
         mediaTesterId: mediaTesterId
       });
 
-      console.log('Media Tester removal response:', response);
-
-      // Show success notification
-      setNotification({
-        open: true,
-        message: `${getTesterDisplayName(tester)} removed successfully (200 OK)`,
-        severity: 'success'
-      });
-
     } catch (error) {
-      console.error('Error removing media tester:', error);
-      // Show error notification
-      setNotification({
-        open: true,
-        message: `Failed to remove ${getTesterDisplayName(tester)}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        severity: 'error'
-      });
+      // Handle error silently for now
     }
   };
 
@@ -123,28 +98,23 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
 
     setIsDeleting(true);
     const tester = deleteDialog.tester;
-    let success = false;
 
     try {
       if (tester.type === 'sip-tester') {
         // Remove SIP tester
         if (tester.requestId && tester.sipTesterId) {
-          const response = await sipTesterService.removeSipTester({
+          await sipTesterService.removeSipTester({
             requestId: tester.requestId,
             sipTesterId: tester.sipTesterId
           });
-          console.log('SIP Tester removal response:', response);
-          success = true;
         }
       } else if (tester.type === 'rtp-tester') {
         // Remove RTP tester
         if (tester.interactionKey && tester.rtpTesterId) {
-          const response = await rtpTesterService.removeRtpTester({
+          await rtpTesterService.removeRtpTester({
             rtpTesterId: tester.rtpTesterId,
             interactionKey: tester.interactionKey
           });
-          console.log('RTP Tester removal response:', response);
-          success = true;
         }
       }
 
@@ -156,29 +126,13 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
       if (selectedTester === tester.id) {
         setSelectedTester(null);
       }
-
-      // Show success notification
-      if (success) {
-        setNotification({
-          open: true,
-          message: `${getTesterDisplayName(tester)} removed successfully (200 OK)`,
-          severity: 'success'
-        });
-      }
     } catch (error) {
-      console.error('Error removing tester:', error);
       // Still remove from local list even if API call fails
       removeTester(tester.id);
       setDeleteDialog({ open: false });
       if (selectedTester === tester.id) {
         setSelectedTester(null);
       }
-      // Show error notification
-      setNotification({
-        open: true,
-        message: `Failed to remove ${getTesterDisplayName(tester)}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        severity: 'error'
-      });
     } finally {
       setIsDeleting(false);
     }
@@ -202,47 +156,34 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
     let successCount = 0;
     let errorCount = 0;
 
-    console.log(`Starting bulk removal of ${testersToRemove.length} ${testerType} testers...`);
-
     // Process each tester individually
     for (const tester of testersToRemove) {
       try {
-        console.log(`Removing ${tester.type} tester:`, tester);
-
         let apiCallSuccessful = false;
 
         if (tester.type === 'sip-tester') {
           if (tester.requestId && tester.sipTesterId) {
-            const response = await sipTesterService.removeSipTester({
+            await sipTesterService.removeSipTester({
               requestId: tester.requestId,
               sipTesterId: tester.sipTesterId
             });
-            console.log('SIP Tester removal response:', response);
             apiCallSuccessful = true;
-          } else {
-            console.warn('SIP Tester missing required fields:', { requestId: tester.requestId, sipTesterId: tester.sipTesterId });
           }
         } else if (tester.type === 'rtp-tester') {
           if (tester.interactionKey && tester.rtpTesterId) {
-            const response = await rtpTesterService.removeRtpTester({
+            await rtpTesterService.removeRtpTester({
               rtpTesterId: tester.rtpTesterId,
               interactionKey: tester.interactionKey
             });
-            console.log('RTP Tester removal response:', response);
             apiCallSuccessful = true;
-          } else {
-            console.warn('RTP Tester missing required fields:', { interactionKey: tester.interactionKey, rtpTesterId: tester.rtpTesterId });
           }
         } else if (tester.type === 'media-tester') {
           if (tester.requestId && tester.mediaTesterId) {
-            const response = await mediaTesterService.removeMediaTester({
+            await mediaTesterService.removeMediaTester({
               requestId: tester.requestId,
               mediaTesterId: tester.mediaTesterId
             });
-            console.log('Media Tester removal response:', response);
             apiCallSuccessful = true;
-          } else {
-            console.warn('Media Tester missing required fields:', { requestId: tester.requestId, mediaTesterId: tester.mediaTesterId });
           }
         }
 
@@ -250,7 +191,6 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
           successCount++;
         } else {
           errorCount++;
-          console.warn('Skipping API call due to missing required fields');
         }
 
         // Always remove from local list regardless of API call success
@@ -262,7 +202,6 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
         }
 
       } catch (error) {
-        console.error(`Error removing ${tester.type} tester:`, error);
         errorCount++;
 
         // Still remove from local list even on error
@@ -274,35 +213,6 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
     }
 
     setRemoveAllDialog({ open: false });
-
-    // Show summary notification
-    const totalProcessed = successCount + errorCount;
-    if (errorCount === 0 && successCount > 0) {
-      setNotification({
-        open: true,
-        message: `All ${successCount} ${testerType.replace('-', ' ')} testers removed successfully`,
-        severity: 'success'
-      });
-    } else if (successCount === 0 && totalProcessed > 0) {
-      setNotification({
-        open: true,
-        message: `Failed to remove all ${totalProcessed} ${testerType.replace('-', ' ')} testers via API (removed from UI)`,
-        severity: 'error'
-      });
-    } else if (successCount > 0 && errorCount > 0) {
-      setNotification({
-        open: true,
-        message: `Removed ${successCount} testers successfully, ${errorCount} failed (all removed from UI)`,
-        severity: 'error'
-      });
-    } else if (totalProcessed === 0) {
-      setNotification({
-        open: true,
-        message: `No ${testerType.replace('-', ' ')} testers found to remove`,
-        severity: 'success'
-      });
-    }
-
     setIsDeleting(false);
   };
 
@@ -399,11 +309,6 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
           {/* SIP Tester specific details */}
           {tester.type === 'sip-tester' && (
             <>
-              {tester.sipTesterId && (
-                <Typography variant="caption" display="block" color="text.secondary">
-                  {/* SIP Tester ID: {tester.sipTesterId} */}
-                </Typography>
-              )}
               {tester.details?.sipTesterId && (
                 <Typography variant="caption" display="block" color="text.secondary">
                   SIP Tester ID: {tester.details.sipTesterId}
@@ -414,18 +319,9 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                   <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1, fontWeight: 'bold' }}>
                     Listening Address:
                   </Typography>
-                  {/* <Typography variant="caption" display="block" color="text.secondary" sx={{ ml: 1 }}>
-                    IP: {tester.details.listeningAddress.ip}
-                  </Typography>
-                  <Typography variant="caption" display="block" color="text.secondary" sx={{ ml: 1 }}>
-                    Port: {tester.details.listeningAddress.port}
-                  </Typography> */}
                   <Typography variant="caption" display="block" color="text.secondary" sx={{ ml: 1 }}>
                     Protocol: {tester.details.listeningAddress.transportProtocol}
                   </Typography>
-                  {/* <Typography variant="caption" display="block" color="text.secondary" sx={{ ml: 1 }}>
-                    Alias: {tester.details.listeningAddress.alias}
-                  </Typography> */}
                   {tester.details.listeningAddress.sipAddress && (
                     <Typography variant="caption" display="block" color="text.secondary" sx={{ ml: 1 }}>
                       SIP Address: {tester.details.listeningAddress.sipAddress}
@@ -463,11 +359,6 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                   RTP Tester ID: {tester.details.rtpTesterId}
                 </Typography>
               )}
-              {tester.senderId && (
-                <Typography variant="caption" display="block" color="text.secondary">
-                  Sender ID: {tester.senderId}
-                </Typography>
-              )}
               {tester.details?.senderId && (
                 <Typography variant="caption" display="block" color="text.secondary">
                   Sender ID: {tester.details.senderId}
@@ -484,11 +375,6 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                   Media Tester ID: {tester.mediaTesterId}
                 </Typography>
               )}
-              {/*{tester.details?.mediaTesterId && (*/}
-              {/*  <Typography variant="caption" display="block" color="text.secondary">*/}
-              {/*    Media Tester ID: {tester.details.mediaTesterId}*/}
-              {/*  </Typography>*/}
-              {/*)}*/}
               {tester.details?.listeningAddress?.transportProtocol && (
                 <Typography variant="caption" display="block" color="text.secondary" sx={{ ml: 1 }}>
                   transportProtocol: {tester.details.listeningAddress.transportProtocol}
@@ -540,28 +426,6 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
           <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
             Created: {new Date(tester.createdAt).toLocaleString()}
           </Typography>
-
-          {/* Raw response data for debugging (collapsible) */}
-          {tester.details && Object.keys(tester.details).length > 0 && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="caption" display="block" color="text.secondary" sx={{ fontWeight: 'bold', mb: 1 }}>
-                {/* Full Response Data: */}
-              </Typography>
-              {/* <Box sx={{
-                backgroundColor: '#f5f5f5',
-                padding: 1,
-                borderRadius: 1,
-                maxHeight: 200,
-                overflow: 'auto',
-                fontSize: '0.7rem',
-                fontFamily: 'monospace'
-              }}>
-                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                  {JSON.stringify(tester.details, null, 2)}
-                </pre>
-              </Box> */}
-            </Box>
-          )}
         </CardContent>
       </Card>
     );
@@ -592,7 +456,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
           borderRadius: '50%',
           animation: 'pulse 3s infinite',
         }} />
-        
+
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, position: 'relative', zIndex: 1 }}>
           <Box
             sx={{
@@ -607,8 +471,8 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
             🔧
           </Box>
           <Box>
-            <Typography 
-              variant="h6" 
+            <Typography
+              variant="h6"
               component="h2"
               sx={{
                 fontWeight: 700,
@@ -619,10 +483,10 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
             >
               Active Testers
             </Typography>
-            <Typography 
-              variant="caption" 
+            <Typography
+              variant="caption"
               color="text.secondary"
-              sx={{ 
+              sx={{
                 fontSize: '0.75rem',
                 opacity: 0.8,
               }}
@@ -631,13 +495,13 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
             </Typography>
           </Box>
         </Box>
-        
+
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, position: 'relative', zIndex: 1 }}>
-          <Chip 
-            label={state.testers.length} 
-            color="primary" 
+          <Chip
+            label={state.testers.length}
+            color="primary"
             size="small"
-            sx={{ 
+            sx={{
               fontWeight: 600,
               background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
               color: 'white',
@@ -647,10 +511,10 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
             }}
           />
           {state.testers.length > 0 && (
-            <Box sx={{ 
-              width: 6, 
-              height: 6, 
-              borderRadius: '50%', 
+            <Box sx={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
               backgroundColor: 'success.main',
               animation: 'pulse 2s infinite',
             }} />
@@ -864,22 +728,6 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Notification Snackbar */}
-      {/* <Snackbar
-        open={notification.open}
-        autoHideDuration={6000}
-        onClose={handleNotificationClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={handleNotificationClose}
-          severity={notification.severity}
-          sx={{ width: '100%' }}
-        >
-          {notification.message}
-        </Alert>
-      </Snackbar> */}
 
       {/* RTP Tester Options Menu */}
       <Menu

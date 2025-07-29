@@ -4,7 +4,6 @@ import {
   CardContent,
   CardActions,
   Typography,
-  Button,
   Box,
   Chip,
   List,
@@ -53,6 +52,17 @@ export const TesterSelectionCard: React.FC<TesterSelectionCardProps> = ({
 }) => {
   return (
     <Card
+      onClick={() => !disabled && onSelect(testerType)}
+      onKeyDown={(e) => {
+        if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onSelect(testerType);
+        }
+      }}
+      tabIndex={disabled ? -1 : 0}
+      role="button"
+      aria-label={`Select ${title} tester`}
+      aria-pressed={isSelected}
       sx={{
         height: '100%',
         display: 'flex',
@@ -70,6 +80,11 @@ export const TesterSelectionCard: React.FC<TesterSelectionCardProps> = ({
               'rgba(46, 125, 50, 0.05)'} 0%, rgba(255, 255, 255, 0.9) 100%)`
           : 'rgba(255, 255, 255, 0.9)',
         backdropFilter: 'blur(10px)',
+        '&:focus-visible': {
+          outline: `2px solid ${TESTER_COLORS[testerType] === 'primary' ? '#1976d2' : 
+            TESTER_COLORS[testerType] === 'secondary' ? '#dc004e' : '#2e7d32'}`,
+          outlineOffset: 2,
+        },
         '&:hover': disabled ? {} : {
           boxShadow: isSelected ? 8 : 6,
           transform: 'translateY(-8px) scale(1.02)',
@@ -99,7 +114,6 @@ export const TesterSelectionCard: React.FC<TesterSelectionCardProps> = ({
           opacity: 0.6,
         } : {},
       }}
-      onClick={() => !disabled && onSelect(testerType)}
     >
       <CardContent sx={{ flexGrow: 1, pb: 1, position: 'relative' }}>
         {/* Background Pattern */}

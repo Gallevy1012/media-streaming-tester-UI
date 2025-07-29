@@ -178,12 +178,11 @@ export const TesterList: React.FC<TesterListProps> = ({ compact = false }) => {
       // Import the mediaTesterService dynamically to avoid circular imports
       const { mediaTesterService } = await import('../../services/mediaTesterService');
       
-      const response = await mediaTesterService.removeMediaTester({
+      await mediaTesterService.removeMediaTester({
         requestId: requestId,
         mediaTesterId: mediaTesterId
       });
 
-      console.log('Media Tester removal response:', response);
     } catch (error) {
       console.error('Error removing media tester:', error);
     }
