@@ -18,6 +18,7 @@ import {
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  onRefreshInvites?: () => void;
 }
 
 interface State {
@@ -49,10 +50,11 @@ export class ErrorBoundary extends Component<Props, State> {
       error,
       errorInfo,
     });
-    
+
     // Log to console for debugging
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
+
 
   handleRetry = () => {
     this.setState({
@@ -61,6 +63,12 @@ export class ErrorBoundary extends Component<Props, State> {
       errorInfo: undefined,
       showDetails: false,
     });
+  };
+
+  handleRefreshInvites = () => {
+    if (this.props.onRefreshInvites) {
+      this.props.onRefreshInvites();
+    }
   };
 
   toggleDetails = () => {
@@ -104,11 +112,11 @@ export class ErrorBoundary extends Component<Props, State> {
                 },
               }}
             />
-            
+
             <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
               Oops! Something went wrong
             </Typography>
-            
+
             <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
               We're sorry, but something unexpected happened. Please try refreshing the page or contact support if the problem persists.
             </Typography>
@@ -122,12 +130,12 @@ export class ErrorBoundary extends Component<Props, State> {
               >
                 Try Again
               </Button>
-              
               <Button
                 variant="outlined"
-                onClick={() => window.location.reload()}
+                onClick={this.handleRefreshInvites}
+                disabled={!this.props.onRefreshInvites}
               >
-                Refresh Page
+                Refresh Invites
               </Button>
             </Box>
 
@@ -141,7 +149,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 >
                   {this.state.showDetails ? 'Hide' : 'Show'} Technical Details
                 </Button>
-                
+
                 <Collapse in={this.state.showDetails}>
                   <Alert severity="error" sx={{ textAlign: 'left' }}>
                     <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1 }}>

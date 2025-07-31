@@ -64,6 +64,8 @@ interface RtpFormData {
   acceptedMismatchPercentage?: number;
   timeoutMs?: number;
 
+  // Stream packets count fields
+  ssrcs?: number[];
 }
 
 export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete, onBack }) => {
@@ -135,37 +137,6 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
         return { interactionKey: '' };
     }
   });
-
-  useEffect(() => {
-    setFormData(() => {
-      switch (functionId) {
-        case 'open-receiving-points':
-          return {
-            ssrc1: undefined,
-            ssrc2: undefined,
-            packetCount: 1000,
-            interactionKey: '',
-          };
-        case 'start-stream':
-          return {
-            testStreamConfigurations: [{
-              ssrc: 12345,
-              streamSize: '30',
-              sourcePort: 42000,
-              targetIp: '',
-              targetPort: 42002,
-            }],
-            streamType: 'MONO' as StreamType,
-            rtpCodec: 'PCMU' as MediaCodec,
-            interactionKey: '',
-            intervalInMs: 1000,
-          };
-        // ...other cases
-        default:
-          return { interactionKey: '' };
-      }
-    });
-  }, [functionId]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -303,6 +274,10 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
             intervalInMs: formData.intervalInMs,
           };
           response = await rtpTesterService.startStream(startRequest);
+
+          // Add senderId to additional data if available in response
+          if (response) {
+          }
           break;
         case 'remove-rtp-tester':
           response = await rtpTesterService.removeRtpTester({
@@ -345,8 +320,8 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
           break;
         case 'stream-packets-count':
           response = await rtpTesterService.getStreamedPacketsCount({
-            testerId: formData.testerId || '',
-            ssrcs: [formData.ssrc1, formData.ssrc2].filter((ssrc): ssrc is number => ssrc !== undefined),
+            rtpTesterId: formData.testerId || '',
+            ssrcs: formData.ssrcs || [],
             interactionKey: formData.interactionKey,
           });
           break;
@@ -444,7 +419,7 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
             <Dropdown
               id="streamType"
               label="Stream Type"
-              value={formData.streamType || 'MONO'}
+              value={formData.streamType || ''}
               options={[
                 { value: 'MONO', label: 'Mono' },
                 { value: 'STEREO', label: 'Stereo' },
@@ -472,19 +447,22 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
             <NumberInput
             id={`intervalInMs`}
             label="Interval (ms)"
-            value={formData.intervalInMs || ''}
+            value={formData.intervalInMs || 0}
             onChange={handleInputChange('intervalInMs')}
             helperText="Interval between packets in milliseconds"
           />
 
-            <TextInput
+            <NumberInput
               id="streamSize"
               label="Stream Duration (seconds)"
-              value={formData.testStreamConfigurations?.[0]?.streamSize}
+              value={parseInt(formData.testStreamConfigurations?.[0]?.streamSize || '30')}
               onChange={(value) => handleStreamConfigChange(0, 'streamSize')(value.toString())}
+              min={1}
               required
-              helperText="Duration in seconds (Min 1 second)"
+              helperText="Duration in seconds"
             />
+
+
 
             <TextInput
               id="interactionKey"
@@ -505,23 +483,24 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
                 <CardContent>
                   <Typography variant="subtitle1" gutterBottom>
                     {formData.streamType === 'STEREO' ?
-                      `Channel ${index + 1}` :
+                      `Channel ${index + 1} (${index === 0 ? 'Left' : 'Right'})` :
                       'Stream Configuration'
                     }
                   </Typography>
 
                   <Stack spacing={2}>
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                    </Box>
-                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                       <NumberInput
                         id={`ssrc-${index}`}
                         label="SSRC"
-                        value={config.ssrc || ''}
+                        value={config.ssrc}
                         onChange={handleStreamConfigChange(index, 'ssrc')}
                         required
                         helperText="Synchronization Source identifier"
                       />
+
+                    </Box>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                       <TextInput
                         id={`sourcePort-${index}`}
                         label="Source Port"
@@ -547,15 +526,6 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
                         required
                         placeholder="42000-62000"
                         helperText="Source port for RTP stream (42,000-62,000)"
-                      />
-                      <TextInput
-                        id={`targetIp-${index}`}
-                        label="Target IP"
-                        value={config.targetIp}
-                        onChange={handleStreamConfigChange(index, 'targetIp')}
-                        required
-                        placeholder="192.168.1.100"
-                        helperText="Target IP address for RTP stream"
                       />
                       <TextInput
                         id={`targetPort-${index}`}
@@ -584,6 +554,15 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
                         helperText="Target port for RTP stream (42,000-62,000)"
                       />
                     </Box>
+                    <TextInput
+                      id={`targetIp-${index}`}
+                      label="Target IP"
+                      value={config.targetIp}
+                      onChange={handleStreamConfigChange(index, 'targetIp')}
+                      required
+                      placeholder="192.168.1.100"
+                      helperText="Target IP address for RTP stream"
+                    />
                   </Stack>
                 </CardContent>
               </Card>
@@ -595,10 +574,10 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
         return (
           <>
             <TextInput
-              id="rtpTesterId"
+              id="testerId"
               label="RTP Tester ID"
               value={formData.testerId || ''}
-              onChange={handleInputChange('rtpTesterId')}
+              onChange={handleInputChange('esterId')}
               required
               placeholder="550e8400-e29b-41d4-a716-446655440000"
               helperText="UUID of the RTP tester to remove"
@@ -735,7 +714,7 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
             <NumberInput
               id="ssrc"
               label="SSRC"
-              value={formData.ssrc || ''}
+              value={formData.ssrc || 0}
               onChange={handleInputChange('ssrc')}
               required
               helperText="Synchronization Source identifier"
@@ -814,21 +793,14 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
               placeholder="550e8400-e29b-41d4-a716-446655440000"
               helperText="UUID of the RTP tester"
             />
-            <NumberInput
-              id="ssrc1"
-              label="SSRC 1"
-              value={formData.ssrc1 || ''}
-              onChange={handleInputChange('ssrc1')}
-              placeholder="12345"
-              helperText="First channel ssrc"
-            />
-            <NumberInput
-              id="ssrc2"
-              label="SSRC 2 (optional)"
-              value={formData.ssrc2 || ''}
-              onChange={handleInputChange('ssrc2')}
-              placeholder="12346"
-              helperText="Second channel ssrc"
+            <TextInput
+              id="ssrcs"
+              label="SSRCs (comma-separated)"
+              value={formData.ssrcs?.join(', ') || ''}
+              onChange={handleInputChange('ssrcs')}
+              required
+              placeholder="12345, 12346, "
+              helperText="List of Synchronization Source identifiers"
             />
             <TextInput
               id="interactionKey"
@@ -887,7 +859,7 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
                 disabled={isLoading}
                 sx={{ minWidth: 120 }}
               >
-                {isLoading ? 'Testing...' : 'Send REQUEST'}
+                {isLoading ? 'Testing...' : 'Run Test'}
               </Button>
             </Box>
           </Box>

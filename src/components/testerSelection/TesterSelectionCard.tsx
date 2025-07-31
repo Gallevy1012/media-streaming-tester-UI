@@ -37,7 +37,7 @@ const TESTER_ICONS: Record<TesterType, React.ReactNode> = {
 
 const TESTER_COLORS: Record<TesterType, 'primary' | 'secondary' | 'success'> = {
   'sip-tester': 'primary',
-  'rtp-tester': 'secondary', 
+  'rtp-tester': 'secondary',
   'media-tester': 'success',
 };
 
@@ -74,14 +74,12 @@ export const TesterSelectionCard: React.FC<TesterSelectionCardProps> = ({
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         position: 'relative',
         overflow: 'visible',
-        background: isSelected 
-          ? `linear-gradient(135deg, ${TESTER_COLORS[testerType] === 'primary' ? 'rgba(25, 118, 210, 0.05)' : 
-              TESTER_COLORS[testerType] === 'secondary' ? 'rgba(220, 0, 78, 0.05)' : 
-              'rgba(46, 125, 50, 0.05)'} 0%, rgba(255, 255, 255, 0.9) 100%)`
-          : 'rgba(255, 255, 255, 0.9)',
+        background: isSelected
+          ? 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)' // lighter blue gradient
+          : 'white',
         backdropFilter: 'blur(10px)',
         '&:focus-visible': {
-          outline: `2px solid ${TESTER_COLORS[testerType] === 'primary' ? '#1976d2' : 
+          outline: `2px solid ${TESTER_COLORS[testerType] === 'primary' ? '#1976d2' :
             TESTER_COLORS[testerType] === 'secondary' ? '#dc004e' : '#2e7d32'}`,
           outlineOffset: 2,
         },
@@ -105,8 +103,8 @@ export const TesterSelectionCard: React.FC<TesterSelectionCardProps> = ({
           left: -2,
           right: -2,
           bottom: -2,
-          background: `linear-gradient(45deg, ${TESTER_COLORS[testerType] === 'primary' ? '#1976d2, #42a5f5' : 
-            TESTER_COLORS[testerType] === 'secondary' ? '#dc004e, #ff5983' : 
+          background: `linear-gradient(45deg, ${TESTER_COLORS[testerType] === 'primary' ? '#e3f2fd, #bbdefb' :
+            TESTER_COLORS[testerType] === 'secondary' ? '#dc004e, #ff5983' :
             '#2e7d32, #4caf50'})`,
           borderRadius: 'inherit',
           zIndex: -1,
@@ -124,21 +122,21 @@ export const TesterSelectionCard: React.FC<TesterSelectionCardProps> = ({
           width: 100,
           height: 100,
           opacity: 0.1,
-          background: `radial-gradient(circle, ${TESTER_COLORS[testerType] === 'primary' ? '#1976d2' : 
+          background: `radial-gradient(circle, ${TESTER_COLORS[testerType] === 'primary' ? '#e3f2fd' :
             TESTER_COLORS[testerType] === 'secondary' ? '#dc004e' : '#2e7d32'} 0%, transparent 70%)`,
           borderRadius: '0 16px 0 100%',
         }} />
-        
+
         <Box display="flex" alignItems="center" gap={2} mb={2}>
-          <Box 
+          <Box
             color={`${TESTER_COLORS[testerType]}.main`}
             className="card-icon"
             sx={{
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               p: 1,
               borderRadius: 2,
-              background: `linear-gradient(135deg, ${TESTER_COLORS[testerType] === 'primary' ? 'rgba(25, 118, 210, 0.1)' : 
-                TESTER_COLORS[testerType] === 'secondary' ? 'rgba(220, 0, 78, 0.1)' : 
+              background: `linear-gradient(135deg, ${TESTER_COLORS[testerType] === 'primary' ? 'rgba(187, 222, 251, 0.3)' :
+                TESTER_COLORS[testerType] === 'secondary' ? 'rgba(220, 0, 78, 0.1)' :
                 'rgba(46, 125, 50, 0.1)'} 0%, rgba(255, 255, 255, 0.5) 100%)`,
             }}
           >
@@ -169,11 +167,11 @@ export const TesterSelectionCard: React.FC<TesterSelectionCardProps> = ({
           </Box>
         </Box>
 
-        <Typography 
-          variant="body2" 
-          color="text.secondary" 
-          paragraph 
-          sx={{ 
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          paragraph
+          sx={{
             lineHeight: 1.6,
             mb: 2,
           }}
@@ -181,27 +179,27 @@ export const TesterSelectionCard: React.FC<TesterSelectionCardProps> = ({
           {description}
         </Typography>
 
-        <Typography 
-          variant="subtitle2" 
-          gutterBottom 
-          sx={{ 
-            fontWeight: 600, 
+        <Typography
+          variant="subtitle2"
+          gutterBottom
+          sx={{
+            fontWeight: 600,
             color: `${TESTER_COLORS[testerType]}.main`,
             mb: 1,
           }}
         >
           🎯 Key Features:
         </Typography>
-        <List 
-          dense 
-          sx={{ py: 0 }} 
+        <List
+          dense
+          sx={{ py: 0 }}
           className="feature-list"
         >
           {features.map((feature, index) => (
-            <ListItem 
-              key={index} 
-              sx={{ 
-                py: 0.25, 
+            <ListItem
+              key={index}
+              sx={{
+                py: 0.25,
                 px: 0,
                 transition: 'all 0.2s ease-in-out',
               }}
@@ -212,7 +210,7 @@ export const TesterSelectionCard: React.FC<TesterSelectionCardProps> = ({
                     width: 6,
                     height: 6,
                     borderRadius: '50%',
-                    backgroundColor: `${TESTER_COLORS[testerType]}.main`,
+                    backgroundColor: `${TESTER_COLORS[testerType]}.light`,
                   }}
                 />
               </ListItemIcon>
@@ -235,11 +233,8 @@ export const TesterSelectionCard: React.FC<TesterSelectionCardProps> = ({
             height: 3,
             borderRadius: 1.5,
             background: isSelected
-              ? `linear-gradient(90deg, ${TESTER_COLORS[testerType] === 'primary' ? '#1976d2' : 
-                  TESTER_COLORS[testerType] === 'secondary' ? '#dc004e' : '#2e7d32'} 0%, ${
-                  TESTER_COLORS[testerType] === 'primary' ? '#42a5f5' : 
-                  TESTER_COLORS[testerType] === 'secondary' ? '#ff5983' : '#4caf50'} 100%)`
-              : 'rgba(0, 0, 0, 0.1)',
+              ? 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)'
+              : 'white',
             transition: 'all 0.3s ease-in-out',
           }}
         />
