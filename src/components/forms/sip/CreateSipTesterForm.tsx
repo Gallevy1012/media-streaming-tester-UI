@@ -39,6 +39,7 @@ interface CreateSipTesterFormData {
   saveDialog?: boolean;
   isStateless?: boolean;
   imrRequesterId?: number | null;
+  automaticSourceAddressesGeneration?: boolean;
 }
 
 export const CreateSipTesterForm: React.FC<CreateSipTesterFormProps> = ({ onTestComplete, onBack }) => {
@@ -47,7 +48,7 @@ export const CreateSipTesterForm: React.FC<CreateSipTesterFormProps> = ({ onTest
     useDefaultHandlers: true,
     customSessionExpiration: null,
     testerKeyName: 'sip-tester-default',
-    testerRole: 'DEFAULT_CLIENT' as TesterRole,
+    testerRole: 'AVAYA_SBC' as TesterRole,
     ip: '127.0.0.1',
     port: 5060,
     transportProtocol: 'UDP' as TransportProtocol,
@@ -57,7 +58,15 @@ export const CreateSipTesterForm: React.FC<CreateSipTesterFormProps> = ({ onTest
     saveDialog: true,
     isStateless: false,
     imrRequesterId: null,
+    automaticSourceAddressesGeneration: true,
   });
+
+  // Effect to handle automatic source address generation
+  useEffect(() => {
+    if (formData.automaticSourceAddressesGeneration) {
+      setFormData(prev => ({ ...prev, ip: '0.0.0.0' }));
+    }
+  }, [formData.automaticSourceAddressesGeneration]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -150,6 +159,7 @@ export const CreateSipTesterForm: React.FC<CreateSipTesterFormProps> = ({ onTest
           unsupportedCodecs: formData.unsupportedCodecs,
           saveDialog: true,
           isStateless: formData.isStateless,
+          automaticSourceAddressesGeneration: formData.automaticSourceAddressesGeneration,
         };
 
         // Add optional fields only if they have values
@@ -254,11 +264,9 @@ export const CreateSipTesterForm: React.FC<CreateSipTesterFormProps> = ({ onTest
             <Dropdown
               id="testerRole"
               label="Tester Role"
-              value={formData.testerRole || 'DEFAULT_CLIENT'}
+              value={formData.testerRole || 'AVAYA_SBC'}
               onChange={handleInputChange('testerRole')}
               options={[
-                { value: 'DEFAULT_CLIENT', label: 'Default Client' },
-                { value: 'DEFAULT_SERVER', label: 'Default Server' },
                 { value: 'AVAYA_SBC', label: 'Avaya SBC' },
                 { value: 'CISCO_SBC', label: 'Cisco SBC' },
                 { value: 'TEAMS_SBC', label: 'Teams SBC' },
@@ -266,7 +274,7 @@ export const CreateSipTesterForm: React.FC<CreateSipTesterFormProps> = ({ onTest
                 { value: 'SUPERVISOR', label: 'Supervisor' },
                 { value: 'RTIG', label: 'RTIG' },
                 { value: 'ESFU', label: 'ESFU' },
-                { value: 'SIP_LB', label: 'SIP Load Balancer' },
+                { value: 'SIP_LB', label: 'SIP-LB' },
                 { value: 'VRSP', label: 'VRSP' },
               ]}
               required
@@ -281,6 +289,7 @@ export const CreateSipTesterForm: React.FC<CreateSipTesterFormProps> = ({ onTest
               required
               placeholder="192.168.1.100"
               helperText="IP address for the SIP tester to listen on"
+              disabled={formData.automaticSourceAddressesGeneration}
             />
 
             <TextInput
@@ -303,7 +312,7 @@ export const CreateSipTesterForm: React.FC<CreateSipTesterFormProps> = ({ onTest
                 }
               }}
               required
-              helperText={validationErrors.port || "Enter port number between 42000-62000"}
+              helperText={validationErrors.port || "Enter port number between 5000-6000"}
               placeholder="5060"
             />
 
@@ -327,7 +336,7 @@ export const CreateSipTesterForm: React.FC<CreateSipTesterFormProps> = ({ onTest
               onChange={handleInputChange('alias')}
               required
               placeholder="sip.example.com"
-              helperText="Alias for the communication address"
+              helperText="Alias for the communication address (need to be unique)"
             />
 
             <TextInput
@@ -408,6 +417,15 @@ export const CreateSipTesterForm: React.FC<CreateSipTesterFormProps> = ({ onTest
                     />
                   }
                   label="Stateless Mode"
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formData.automaticSourceAddressesGeneration || false}
+                      onChange={(e) => handleInputChange('automaticSourceAddressesGeneration')(e.target.checked)}
+                    />
+                  }
+                  label="Automatic Source Addresses Generation"
                 />
               </Box>
             </Box>

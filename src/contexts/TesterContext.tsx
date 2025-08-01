@@ -42,6 +42,7 @@ type TesterAction =
     } }
   | { type: 'REMOVE_TESTER'; payload: { id: string } }
   | { type: 'ADD_DIALOG_ID'; payload: { sipTesterId: string; dialogId: string } }
+  | { type: 'REMOVE_DIALOG_ID'; payload: { testerId: string; dialogId: string; testerType: 'sip-tester' | 'media-tester' } }
   | { type: 'LOAD_FROM_STORAGE' };
 
 const initialState: TesterState = {
@@ -57,7 +58,6 @@ function testerReducer(state: TesterState, action: TesterAction): TesterState {
   switch (action.type) {
     case 'ADD_TESTER': {
       const { type, details, interactionKey, requestId, rtpTesterId, sipTesterId, mediaTesterId, senderId, operation , alias } = action.payload;
-      console.log('TesterContext: Adding tester', { type, rtpTesterId, sipTesterId, mediaTesterId, senderId, operation });
       const newCounter = state.counters[type] + 1;
       const newTester: TesterInstance = {
         id: `${type}-${newCounter}`,
@@ -74,7 +74,6 @@ function testerReducer(state: TesterState, action: TesterAction): TesterState {
         operation,
         dialogIds: type === 'sip-tester' ? [] : undefined,
       };
-      console.log('TesterContext: Created new tester', newTester);
 
       const newState = {
         ...state,
@@ -84,7 +83,6 @@ function testerReducer(state: TesterState, action: TesterAction): TesterState {
           [type]: newCounter,
         },
       };
-      console.log('TesterContext: New state', newState);
 
       // Save to localStorage
       localStorage.setItem('tester-instances', JSON.stringify(newState));
@@ -117,25 +115,113 @@ function testerReducer(state: TesterState, action: TesterAction): TesterState {
             detailsTesterId: tester.details?.testerId
           });
           
-          // Primary match: by sipTesterId
-          if (tester.type === 'sip-tester' && tester.sipTesterId === sipTesterId) {
-            console.log('MATCH by sipTesterId! Adding dialog ID:', dialogId);
-            return {
-              ...tester,
-              dialogIds: [...(tester.dialogIds || []), dialogId]
-            };
+          // Handle SIP testers
+          if (tester.type === 'sip-tester') {
+            // Primary match: by sipTesterId
+            if (tester.sipTesterId === sipTesterId) {
+              console.log('MATCH by sipTesterId! Adding dialog ID:', dialogId);
+              return {
+                ...tester,
+                dialogIds: [...(tester.dialogIds || []), dialogId]
+              };
+            }
+            
+            // Fallback match: if sipTesterId is undefined, try to match by the sipTesterId in the details
+            if (!tester.sipTesterId && 
+                tester.details && 
+                (tester.details.sipTesterId === sipTesterId || tester.details.testerId === sipTesterId)) {
+              console.log('FALLBACK MATCH by details! Adding dialog ID:', dialogId, 'and fixing sipTesterId');
+              return {
+                ...tester,
+                sipTesterId: sipTesterId, // Fix the missing sipTesterId
+                dialogIds: [...(tester.dialogIds || []), dialogId]
+              };
+            }
           }
           
-          // Fallback match: if sipTesterId is undefined, try to match by the sipTesterId in the details
-          if (tester.type === 'sip-tester' && 
-              !tester.sipTesterId && 
-              tester.details && 
-              (tester.details.sipTesterId === sipTesterId || tester.details.testerId === sipTesterId)) {
-            console.log('FALLBACK MATCH by details! Adding dialog ID:', dialogId, 'and fixing sipTesterId');
+          // Handle Media testers
+          if (tester.type === 'media-tester') {
+            console.log('🎯 TesterContext - Checking media tester for dialog ID match:', { 
+              testerId: tester.id, 
+              sipTesterId: tester.sipTesterId,
+              mediaTesterId: tester.mediaTesterId,
+              searchingSipTesterId: sipTesterId 
+            });
+            
+            // Primary match: by sipTesterId (which is actually mediaTesterId for media testers)
+            if (tester.sipTesterId === sipTesterId) {
+              console.log('🎯 MEDIA TESTER MATCH by sipTesterId! Adding dialog ID:', dialogId);
+              return {
+                ...tester,
+                dialogIds: [...(tester.dialogIds || []), dialogId]
+              };
+            }
+            
+            // Fallback match: if sipTesterId is undefined, try to match by the testerId in the details
+            if (!tester.sipTesterId && 
+                tester.details && 
+                (tester.details.mediaTesterId === sipTesterId || tester.details.testerId === sipTesterId)) {
+              console.log('🎯 MEDIA TESTER FALLBACK MATCH by details! Adding dialog ID:', dialogId, 'and fixing sipTesterId');
+              return {
+                ...tester,
+                sipTesterId: sipTesterId, // Fix the missing sipTesterId (store mediaTesterId in sipTesterId field)
+                dialogIds: [...(tester.dialogIds || []), dialogId]
+              };
+            }
+            
+            console.log('🎯 NO MATCH for media tester');
+          }
+          
+          return tester;
+        }),
+      };
+      
+      console.log('Result: Updated testers:', newState.testers.filter(t => t.type === 'sip-tester' || t.type === 'media-tester').map(t => ({ 
+        id: t.id, 
+        type: t.type,
+        sipTesterId: t.sipTesterId, 
+        dialogIds: t.dialogIds 
+      })));
+      
+      // Save to localStorage
+      localStorage.setItem('tester-instances', JSON.stringify(newState));
+      return newState;
+    }
+
+    case 'REMOVE_DIALOG_ID': {
+      const { testerId, dialogId, testerType } = action.payload;
+      console.log('REMOVE_DIALOG_ID: Looking for testerId:', testerId, 'dialogId:', dialogId, 'testerType:', testerType);
+      
+      const newState = {
+        ...state,
+        testers: state.testers.map(tester => {
+          console.log('Checking tester for dialog removal:', { 
+            id: tester.id, 
+            type: tester.type, 
+            sipTesterId: tester.sipTesterId,
+            mediaTesterId: tester.mediaTesterId,
+            dialogIds: tester.dialogIds
+          });
+          
+          // Match by testerType and specific tester ID
+          let shouldRemoveDialog = false;
+          if (testerType === 'sip-tester' && tester.type === 'sip-tester') {
+            shouldRemoveDialog = tester.sipTesterId === testerId || 
+                               (tester.details?.sipTesterId === testerId) || 
+                               (tester.details?.testerId === testerId);
+          } else if (testerType === 'media-tester' && tester.type === 'media-tester') {
+            shouldRemoveDialog = tester.mediaTesterId === testerId || 
+                               (tester.details?.mediaTesterId === testerId) || 
+                               (tester.details?.testerId === testerId);
+          }
+          
+          if (shouldRemoveDialog && tester.dialogIds) {
+            console.log('MATCH! Removing dialog ID:', dialogId, 'from tester:', tester.id);
+            const updatedDialogIds = tester.dialogIds.filter(id => id !== dialogId);
+            console.log('Updated dialog IDs:', updatedDialogIds);
             return {
               ...tester,
-              sipTesterId: sipTesterId, // Fix the missing sipTesterId
-              dialogIds: [...(tester.dialogIds || []), dialogId]
+              dialogIds: updatedDialogIds
             };
           }
           
@@ -143,9 +229,9 @@ function testerReducer(state: TesterState, action: TesterAction): TesterState {
         }),
       };
       
-      console.log('Result: Updated testers:', newState.testers.filter(t => t.type === 'sip-tester').map(t => ({ 
+      console.log('Result: Updated testers after dialog removal:', newState.testers.filter(t => t.type === testerType).map(t => ({ 
         id: t.id, 
-        sipTesterId: t.sipTesterId, 
+        testerId: testerType === 'sip-tester' ? t.sipTesterId : t.mediaTesterId, 
         dialogIds: t.dialogIds 
       })));
       
@@ -196,6 +282,7 @@ interface TesterContextType {
   removeTester: (id: string) => void;
   removeTesterByTesterId: (type: TesterInstance['type'], testerId: string) => void;
   addDialogId: (sipTesterId: string, dialogId: string) => void;
+  removeDialogId: (testerId: string, dialogId: string, testerType: 'sip-tester' | 'media-tester') => void;
   getTestersByType: (type: TesterInstance['type']) => TesterInstance[];
 }
 
@@ -273,12 +360,17 @@ export const TesterProvider: React.FC<TesterProviderProps> = ({ children }) => {
     dispatch({ type: 'ADD_DIALOG_ID', payload: { sipTesterId, dialogId } });
   };
 
+  const removeDialogId = (testerId: string, dialogId: string, testerType: 'sip-tester' | 'media-tester') => {
+    dispatch({ type: 'REMOVE_DIALOG_ID', payload: { testerId, dialogId, testerType } });
+  };
+
   const value = {
     state,
     addTester,
     removeTester,
     removeTesterByTesterId,
     addDialogId,
+    removeDialogId,
     getTestersByType,
   };
 

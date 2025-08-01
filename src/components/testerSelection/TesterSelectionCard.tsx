@@ -4,7 +4,6 @@ import {
   CardContent,
   CardActions,
   Typography,
-  Button,
   Box,
   Chip,
   List,
@@ -38,7 +37,7 @@ const TESTER_ICONS: Record<TesterType, React.ReactNode> = {
 
 const TESTER_COLORS: Record<TesterType, 'primary' | 'secondary' | 'success'> = {
   'sip-tester': 'primary',
-  'rtp-tester': 'secondary', 
+  'rtp-tester': 'secondary',
   'media-tester': 'success',
 };
 
@@ -53,29 +52,98 @@ export const TesterSelectionCard: React.FC<TesterSelectionCardProps> = ({
 }) => {
   return (
     <Card
+      onClick={() => !disabled && onSelect(testerType)}
+      onKeyDown={(e) => {
+        if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onSelect(testerType);
+        }
+      }}
+      tabIndex={disabled ? -1 : 0}
+      role="button"
+      aria-label={`Select ${title} tester`}
+      aria-pressed={isSelected}
       sx={{
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        border: isSelected ? 2 : 1,
+        border: isSelected ? 3 : 1,
         borderColor: isSelected ? `${TESTER_COLORS[testerType]}.main` : 'divider',
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.6 : 1,
-        transition: 'all 0.2s',
-        '&:hover': disabled ? {} : {
-          boxShadow: 4,
-          transform: 'translateY(-2px)',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        position: 'relative',
+        overflow: 'visible',
+        background: isSelected
+          ? 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)' // lighter blue gradient
+          : 'white',
+        backdropFilter: 'blur(10px)',
+        '&:focus-visible': {
+          outline: `2px solid ${TESTER_COLORS[testerType] === 'primary' ? '#1976d2' :
+            TESTER_COLORS[testerType] === 'secondary' ? '#dc004e' : '#2e7d32'}`,
+          outlineOffset: 2,
         },
+        '&:hover': disabled ? {} : {
+          boxShadow: isSelected ? 8 : 6,
+          transform: 'translateY(-8px) scale(1.02)',
+          borderColor: `${TESTER_COLORS[testerType]}.main`,
+          '& .card-icon': {
+            transform: 'scale(1.1) rotate(5deg)',
+          },
+          '& .feature-list': {
+            '& .MuiListItem-root': {
+              transform: 'translateX(4px)',
+            },
+          },
+        },
+        '&::before': isSelected ? {
+          content: '""',
+          position: 'absolute',
+          top: -2,
+          left: -2,
+          right: -2,
+          bottom: -2,
+          background: `linear-gradient(45deg, ${TESTER_COLORS[testerType] === 'primary' ? '#e3f2fd, #bbdefb' :
+            TESTER_COLORS[testerType] === 'secondary' ? '#dc004e, #ff5983' :
+            '#2e7d32, #4caf50'})`,
+          borderRadius: 'inherit',
+          zIndex: -1,
+          filter: 'blur(8px)',
+          opacity: 0.6,
+        } : {},
       }}
-      onClick={() => !disabled && onSelect(testerType)}
     >
-      <CardContent sx={{ flexGrow: 1, pb: 1 }}>
+      <CardContent sx={{ flexGrow: 1, pb: 1, position: 'relative' }}>
+        {/* Background Pattern */}
+        <Box sx={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: 100,
+          height: 100,
+          opacity: 0.1,
+          background: `radial-gradient(circle, ${TESTER_COLORS[testerType] === 'primary' ? '#e3f2fd' :
+            TESTER_COLORS[testerType] === 'secondary' ? '#dc004e' : '#2e7d32'} 0%, transparent 70%)`,
+          borderRadius: '0 16px 0 100%',
+        }} />
+
         <Box display="flex" alignItems="center" gap={2} mb={2}>
-          <Box color={`${TESTER_COLORS[testerType]}.main`}>
+          <Box
+            color={`${TESTER_COLORS[testerType]}.main`}
+            className="card-icon"
+            sx={{
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              p: 1,
+              borderRadius: 2,
+              background: `linear-gradient(135deg, ${TESTER_COLORS[testerType] === 'primary' ? 'rgba(187, 222, 251, 0.3)' :
+                TESTER_COLORS[testerType] === 'secondary' ? 'rgba(220, 0, 78, 0.1)' :
+                'rgba(46, 125, 50, 0.1)'} 0%, rgba(255, 255, 255, 0.5) 100%)`,
+            }}
+          >
             {TESTER_ICONS[testerType]}
           </Box>
           <Box flexGrow={1}>
-            <Typography variant="h6" component="h3">
+            <Typography variant="h6" component="h3" sx={{ fontWeight: 600, mb: 0.5 }}>
               {title}
             </Typography>
             {isSelected && (
@@ -85,29 +153,72 @@ export const TesterSelectionCard: React.FC<TesterSelectionCardProps> = ({
                 size="small"
                 color={TESTER_COLORS[testerType]}
                 variant="filled"
+                sx={{
+                  fontWeight: 500,
+                  animation: 'pulse 2s infinite',
+                  '@keyframes pulse': {
+                    '0%': { transform: 'scale(1)' },
+                    '50%': { transform: 'scale(1.05)' },
+                    '100%': { transform: 'scale(1)' },
+                  },
+                }}
               />
             )}
           </Box>
         </Box>
 
-        <Typography variant="body2" color="text.secondary" paragraph>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          paragraph
+          sx={{
+            lineHeight: 1.6,
+            mb: 2,
+          }}
+        >
           {description}
         </Typography>
 
-        <Typography variant="subtitle2" gutterBottom>
-          Key Features:
+        <Typography
+          variant="subtitle2"
+          gutterBottom
+          sx={{
+            fontWeight: 600,
+            color: `${TESTER_COLORS[testerType]}.main`,
+            mb: 1,
+          }}
+        >
+          🎯 Key Features:
         </Typography>
-        <List dense sx={{ py: 0 }}>
+        <List
+          dense
+          sx={{ py: 0 }}
+          className="feature-list"
+        >
           {features.map((feature, index) => (
-            <ListItem key={index} sx={{ py: 0.25, px: 0 }}>
-              <ListItemIcon sx={{ minWidth: 32 }}>
-                <CheckIcon color="success" fontSize="small" />
+            <ListItem
+              key={index}
+              sx={{
+                py: 0.25,
+                px: 0,
+                transition: 'all 0.2s ease-in-out',
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 28 }}>
+                <Box
+                  sx={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    backgroundColor: `${TESTER_COLORS[testerType]}.light`,
+                  }}
+                />
               </ListItemIcon>
               <ListItemText
                 primary={feature}
                 primaryTypographyProps={{
                   variant: 'body2',
-                  color: 'text.secondary',
+                  sx: { fontSize: '0.875rem', fontWeight: 500 },
                 }}
               />
             </ListItem>
@@ -115,19 +226,18 @@ export const TesterSelectionCard: React.FC<TesterSelectionCardProps> = ({
         </List>
       </CardContent>
 
-      <CardActions sx={{ pt: 0 }}>
-        <Button
-          fullWidth
-          variant={isSelected ? 'contained' : 'outlined'}
-          color={TESTER_COLORS[testerType]}
-          disabled={disabled}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect(testerType);
+      <CardActions sx={{ justifyContent: 'center', pt: 0, pb: 2 }}>
+        <Box
+          sx={{
+            width: '80%',
+            height: 3,
+            borderRadius: 1.5,
+            background: isSelected
+              ? 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)'
+              : 'white',
+            transition: 'all 0.3s ease-in-out',
           }}
-        >
-          {isSelected ? 'Selected' : 'Select'}
-        </Button>
+        />
       </CardActions>
     </Card>
   );

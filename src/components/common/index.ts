@@ -11,6 +11,7 @@ export { PortInput } from './PortInput';
 export { UriInput } from './UriInput';
 export { KeyValueEditor } from './KeyValueEditor';
 export { Loading } from './Loading';
+export { ErrorBoundary } from './ErrorBoundary';
 
 // Re-export types
 export type { DropdownOption } from './Dropdown';

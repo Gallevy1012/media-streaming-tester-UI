@@ -12,8 +12,18 @@ import {
   TextField,
   Tabs,
   Tab,
+  FormControlLabel,
+  Switch,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
-import { Send as SendIcon, Security as SecurityIcon, ArrowBack as ArrowBackIcon, ExpandMore as ExpandMoreIcon, ContentCopy as ContentCopyIcon } from '@mui/icons-material';
+import { Send as SendIcon, Security as SecurityIcon, ArrowBack as ArrowBackIcon, ExpandMore as ExpandMoreIcon, ContentCopy as ContentCopyIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { TextInput, Dropdown, NumberInput, MultiSelect } from '../../common';
 import { AuthDialog } from '../../auth';
 import { ColoredJsonViewer } from '../../response';
@@ -22,6 +32,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useTester } from '../../../contexts/TesterContext';
 import { sipTesterService, setSipTesterAddDialogIdFunction } from '../../../services/sipTesterService';
 import type { TransportProtocol } from '../../../types';
+import { IconButton, Tooltip } from '@mui/material';
 
 interface SendSipInviteFormProps {
   onTestComplete?: (result: any) => void;
@@ -74,9 +85,16 @@ interface SendSipInviteFormData {
 }
 
 export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComplete, onBack }) => {
+  // HMR Test - This component should auto-reload when changed
   const [activeTab, setActiveTab] = useState(0);
   const [rawInviteText, setRawInviteText] = useState('');
   const [parseError, setParseError] = useState<string | null>(null);
+  const [withCLine, setWithCLine] = useState(true);
+  // Saved Messages State
+  const [savedMessages, setSavedMessages] = useState<{ Name: string; Invite: string; source?: 'json' | 'manual' }[]>([]);
+  const [expandedIndex, setExpandedIndex] = useState<string | false>(false);
+
+
   const [formData, setFormData] = useState<SendSipInviteFormData>({
     sipTesterId: '',
     destinationAddress: {
@@ -116,9 +134,21 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
   const [result, setResult] = useState<any>(null);
   const [customCodecValues, setCustomCodecValues] = useState<{[channelIndex: number]: string}>({});
   const [showCustomCodecInput, setShowCustomCodecInput] = useState<{[channelIndex: number]: boolean}>({});
+  // State for invite name input
+  const [inviteName, setInviteName] = useState("");
+  // State for toggling save invite input
+  const [showSaveInput, setShowSaveInput] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  
+  // State for grouped invites
+  const [groupedInvites, setGroupedInvites] = useState<Record<string, { Name: string; Invite: string }[]>>({});
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [saveToGroup, setSaveToGroup] = useState<string>('');
+  const [showResetDialog, setShowResetDialog] = useState(false);
 
+  const { executeWithAuth } = useAuthenticatedRequest();
   const { state: authState } = useAuth();
-  const { isAuthDialogOpen, closeAuthDialog, executeWithAuth } = useAuthenticatedRequest();
+  const { isAuthDialogOpen, closeAuthDialog } = useAuthenticatedRequest();
   const { addDialogId } = useTester();
 
   // Initialize SIP service with dialog ID function
@@ -127,11 +157,210 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
     setSipTesterAddDialogIdFunction(addDialogId);
   }, [addDialogId]);
 
+  // Load grouped invites on mount
+  useEffect(() => {
+    reloadInvites();
+  }, []);
+
+  // Reload invites from JSON file only when user clicks refresh
+  const reloadInvites = async () => {
+    try {
+      // Load file-based invites from the correct path
+      const response = await fetch('/invites.json?_=' + Date.now());
+      const fileInvites = response.ok ? await response.json() : {};
+
+      // Load user-saved invites from localStorage (grouped structure)
+      let userGroupedInvites: Record<string, { Name: string; Invite: string }[]> = {};
+      const local = localStorage.getItem('sipSavedMessages');
+      if (local) {
+        try {
+          userGroupedInvites = JSON.parse(local);
+        } catch {
+          userGroupedInvites = {};
+        }
+      }
+
+      // Merge file invites and user invites
+      const merged: Record<string, { Name: string; Invite: string }[]> = { ...fileInvites };
+      
+      // Add user invites to existing groups or create new groups
+      Object.keys(userGroupedInvites).forEach(groupName => {
+        if (merged[groupName]) {
+          // Group exists, add user invites that don't already exist
+          const existingNames = new Set(merged[groupName].map((invite) => invite.Name));
+          const uniqueUserInvites = userGroupedInvites[groupName].filter((invite) => 
+            !existingNames.has(invite.Name)
+          );
+          merged[groupName] = [...merged[groupName], ...uniqueUserInvites];
+        } else {
+          // New group, add all user invites
+          merged[groupName] = userGroupedInvites[groupName];
+        }
+      });
+
+      setGroupedInvites(merged);
+      
+      // Flatten for backward compatibility with existing savedMessages state
+      const flattened: { Name: string; Invite: string }[] = [];
+      Object.values(merged).forEach((groupInvites) => {
+        flattened.push(...groupInvites);
+      });
+      setSavedMessages(flattened);
+      
+    } catch (e) {
+      setGroupedInvites({});
+      setSavedMessages([]);
+    }
+    setExpandedIndex(false);
+  };
+
+  // Load saved messages from localStorage on mount - improved for persistence
+  useEffect(() => {
+    const local = localStorage.getItem('sipSavedMessages');
+    if (local) {
+      try {
+        const parsedGroups = JSON.parse(local);
+        // Update both groupedInvites and flatten for backward compatibility
+        setGroupedInvites(prev => {
+          const merged = { ...prev };
+          Object.keys(parsedGroups).forEach(groupName => {
+            if (merged[groupName]) {
+              // Merge with existing groups, avoiding duplicates
+              const existingNames = new Set(merged[groupName].map(invite => invite.Name));
+              const uniqueUserInvites = parsedGroups[groupName].filter((invite: any) => 
+                !existingNames.has(invite.Name)
+              );
+              merged[groupName] = [...merged[groupName], ...uniqueUserInvites];
+            } else {
+              merged[groupName] = parsedGroups[groupName];
+            }
+          });
+          return merged;
+        });
+
+        // Also update flattened savedMessages
+        const flattened: { Name: string; Invite: string }[] = [];
+        Object.values(parsedGroups).forEach((groupInvites: any) => {
+          flattened.push(...groupInvites);
+        });
+        setSavedMessages(prev => [...prev, ...flattened]);
+      } catch {
+        console.warn('Failed to parse saved messages from localStorage');
+      }
+    }
+  }, []);
+
+  // Save user-created messages to localStorage whenever they change - improved persistence
+  useEffect(() => {
+    // Only save if we have valid grouped invites
+    if (Object.keys(groupedInvites).length === 0) return;
+    
+    // Extract only user-created groups/invites (not file-based ones)
+    const userGroups: Record<string, { Name: string; Invite: string }[]> = {};
+    
+    Object.keys(groupedInvites).forEach(groupName => {
+      const userInvitesInGroup = groupedInvites[groupName].filter(invite => {
+        // A message is user-created if it's not in the original file-based invites
+        // More robust check - avoid default file-based invite names
+        const isFileBasedInvite = invite.Name.includes('VRSP') || 
+                                 invite.Name.includes('ESFU') || 
+                                 invite.Name.includes('RECORDER') || 
+                                 invite.Name.includes('SUPERVISOR') || 
+                                 invite.Name.includes('CISCO') ||
+                                 invite.Name.includes('IMR') ||
+                                 invite.Name.includes('NEAREND') ||
+                                 invite.Name.includes('FAREND');
+        return !isFileBasedInvite;
+      });
+      
+      if (userInvitesInGroup.length > 0) {
+        userGroups[groupName] = userInvitesInGroup;
+      }
+    });
+    
+    // Save to localStorage with error handling
+    try {
+      localStorage.setItem('sipSavedMessages', JSON.stringify(userGroups));
+    } catch (error) {
+      console.error('Failed to save messages to localStorage:', error);
+    }
+  }, [groupedInvites]);
+
+  // Generate SIP INVITE message preview
+  const generateSipInvitePreview = (): string => {
+    const { destinationAddress, customHeaders, sdp } = formData;
+
+    // Basic SIP headers
+    const sipRequestLine = `INVITE sip:${destinationAddress.ip}:${destinationAddress.port};transport=${destinationAddress.transportProtocol.toLowerCase()} SIP/2.0`;
+
+    // Default headers that would typically be added by the server
+    const defaultHeaders = [
+      `Via: SIP/2.0/${destinationAddress.transportProtocol} [LOCAL_IP]:[LOCAL_PORT];branch=z9hG4bK[BRANCH_ID]`,
+      `Max-Forwards: 70`,
+      `To: <sip:${destinationAddress.ip}:${destinationAddress.port}>`,
+      `From: <sip:[LOCAL_IP]:[LOCAL_PORT]>;tag=[FROM_TAG]`,
+      `Call-ID: [CALL_ID]`,
+      `CSeq: 1 INVITE`,
+      `Contact: <sip:[LOCAL_IP]:[LOCAL_PORT];transport=${destinationAddress.transportProtocol.toLowerCase()}>`,
+      `Content-Type: application/sdp`,
+    ];
+
+    // Add custom headers
+    const customHeaderLines = Object.entries(customHeaders).map(([key, value]) => `${key}: ${value}`);
+
+    // Generate SDP content
+    const sdpContent = [
+      `v=0`,
+      `o=${sdp.origin.userName} ${sdp.origin.sessionId} ${sdp.origin.sessionVersion} ${sdp.origin.networkType} ${sdp.origin.addressType} ${sdp.origin.ip}`,
+      `s=${sdp.sessionName}`,
+      sdp.sessionInformation ? `i=${sdp.sessionInformation}` : null,
+      withCLine ? `c=${sdp.connection.networkType} ${sdp.connection.addressType} ${sdp.connection.ip}` : null,
+      `t=${sdp.timing.startTime} ${sdp.timing.stopTime}`,
+    ].filter(Boolean);
+
+    // Add basic media descriptions for channels (simplified)
+    sdp.channels.forEach((channel) => {
+      const codecs = channel.codecs || [];
+      const payloadTypes = codecs.length > 0 ? codecs.join(' ') : '0';
+      sdpContent.push(`m=${channel.mediaType} ${channel.port} RTP/AVP ${payloadTypes}`);
+
+      if (channel.connectionAddress && channel.connectionAddress.trim()) {
+        // You can adjust addressType if you support IP6
+        sdpContent.push(`c=IN IP4 ${channel.connectionAddress.trim()}`);
+      }
+
+      // Add basic codec attributes
+      if (codecs.length > 0) {
+        codecs.forEach((codec) => {
+          sdpContent.push(`a=rtpmap:${codec} ${codec}/8000`);
+        });
+      }      // Add sendrecv attribute based on channel state
+      const sendrecv = channel.channelState === 'SEND' ? 'sendonly' :
+                      channel.channelState === 'RECEIVE' ? 'recvonly' : 'sendrecv';
+      sdpContent.push(`a=${sendrecv}`);
+    });
+
+    const sdpString = sdpContent.join('\r\n');
+    const contentLength = new TextEncoder().encode(sdpString).length;
+
+    // Combine all parts
+    const sipMessage = [
+      sipRequestLine,
+      ...defaultHeaders,
+      ...customHeaderLines,
+      `Content-Length: ${contentLength}`,
+      '', // Empty line before SDP
+      sdpString
+    ].join('\r\n');
+
+    return sipMessage;
+  };
+
   // SIP INVITE parsing function
   const parseSipInvite = (sipInviteText: string): Partial<SendSipInviteFormData> | null => {
     try {
       setParseError(null);
-      
+
       const lines = sipInviteText.trim().split('\n');
       const parsed: Partial<SendSipInviteFormData> = {
         destinationAddress: {
@@ -171,7 +400,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
 
       for (const line of lines) {
         const trimmedLine = line.trim();
-        
+
         // Skip empty lines
         if (!trimmedLine) continue;
 
@@ -216,7 +445,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
           const colonIndex = trimmedLine.indexOf(':');
           const headerName = trimmedLine.substring(0, colonIndex).trim();
           const headerValue = trimmedLine.substring(colonIndex + 1).trim();
-          
+
           // Store custom headers (excluding standard ones we handle separately)
           if (!['Via', 'Max-Forwards', 'Call-ID', 'CSeq', 'Contact', 'Content-Type', 'Content-Length', 'MIME-Version'].includes(headerName)) {
             parsed.customHeaders![headerName] = headerValue;
@@ -248,7 +477,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
   const parseSdpSection = (sdpLines: string[]) => {
     console.log('=== SDP PARSING START ===');
     console.log('Input SDP lines:', sdpLines);
-    
+
     const sdp: any = {
       sessionVersion: 0,
       origin: {
@@ -256,13 +485,13 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
         sessionId: '1234567890',
         sessionVersion: 1,
         networkType: 'IN' as const,
-        addressType: 'IP4' as const,
+        addressType: 'IP4' as 'IP6',
         ip: '127.0.0.1',
       },
       sessionName: 'Test Session',
       connection: {
         networkType: 'IN' as const,
-        addressType: 'IP4' as const,
+        addressType: 'IP4' as 'IP6',
         ip: '127.0.0.1',
       },
       timing: {
@@ -277,7 +506,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
 
     for (const line of sdpLines) {
       console.log('Processing SDP line:', line);
-      
+
       if (line.startsWith('v=')) {
         sdp.sessionVersion = parseInt(line.substring(2));
       } else if (line.startsWith('o=')) {
@@ -319,7 +548,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
         console.log('*** FOUND NEW MEDIA LINE ***:', line);
         const parts = line.substring(2).split(' ');
         console.log('Media line parts:', parts);
-        
+
         if (parts.length >= 3) {
           // Save previous channel if exists
           if (currentChannel) {
@@ -327,7 +556,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
             console.log(`Saving channel #${channelCount}:`, currentChannel);
             sdp.channels.push(currentChannel);
           }
-          
+
           // Convert SDP transport protocol format to enum format
           let transportProtocol = parts[2];
           if (transportProtocol === 'RTP/AVP') {
@@ -335,17 +564,17 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
           } else if (transportProtocol === 'RTP/SAVP') {
             transportProtocol = 'RTP_SAVP';
           }
-          
+
           // Extract codecs (numbers after transport protocol) - THIS IS KEY!
           const codecParts = parts.slice(3); // Get everything after transport protocol
           console.log('Codec parts from m= line:', codecParts);
           const codecs = codecParts.map(codec => parseInt(codec)).filter(codec => !isNaN(codec));
           console.log('Parsed codecs:', codecs);
-          
+
           // If no codecs found, use default common codecs
           const finalCodecs = codecs.length > 0 ? codecs : [0, 8, 18];
           console.log('Final codecs (with defaults if needed):', finalCodecs);
-          
+
           currentChannel = {
             mediaType: parts[0].toUpperCase(),
             port: parseInt(parts[1]),
@@ -406,10 +635,10 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
     console.log('=== SDP PARSING END ===');
 
     // Filter out invalid channels (those without proper mediaType or port)
-    const validChannels = sdp.channels.filter((channel: any) => 
-      channel.mediaType && 
-      channel.port && 
-      channel.port > 0 && 
+    const validChannels = sdp.channels.filter((channel: any) =>
+      channel.mediaType &&
+      channel.port &&
+      channel.port > 0 &&
       channel.transportProtocol
     );
 
@@ -417,6 +646,11 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
     sdp.channels = validChannels;
 
     return sdp;
+  };
+
+  const handleAuthSuccess = () => {
+    // Retry the request after successful authentication
+    handleSubmit({ preventDefault: () => {} } as React.FormEvent);
   };
 
   // Handle parsing and populating form
@@ -439,12 +673,12 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
           channels: parsed.sdp.channels || []
         } : prev.sdp,
       }));
-      
+
       // Debug log to help identify channel duplication
       console.log('Parsed SDP:', parsed.sdp);
       console.log('Parsed channels count:', parsed.sdp?.channels?.length || 0);
       console.log('Parsed channels:', parsed.sdp?.channels);
-      
+
       setActiveTab(0); // Switch to manual form tab
       setParseError(null);
     }
@@ -480,7 +714,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
             channels: formData.sdp.channels.map(channel => {
               // Ensure codecs array is never empty
               const finalCodecs = channel.codecs && channel.codecs.length > 0 ? channel.codecs : [0, 8, 18];
-              
+
               // Ensure transport protocol is in the correct format for server
               let serverTransportProtocol = channel.transportProtocol;
               if (serverTransportProtocol === 'RTP_AVP') {
@@ -488,7 +722,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
               } else if (serverTransportProtocol === 'RTP/AVP') {
                 serverTransportProtocol = 'RTP_AVP';
               }
-              
+
               return {
                 mediaType: channel.mediaType,
                 port: channel.port,
@@ -504,7 +738,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
             }),
           },
         };
-        
+
         console.log('=== SENDING SIP INVITE REQUEST ===');
         console.log('Request payload:', JSON.stringify(requestPayload, null, 2));
         console.log('Channels being sent:', requestPayload.sdp.channels);
@@ -517,7 +751,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
             codecsLength: channel.codecs?.length || 0,
             codecsString: channel.codecs?.join(' ') || 'EMPTY'
           });
-          
+
           // Validate that codecs are present
           if (!channel.codecs || channel.codecs.length === 0) {
             console.warn(`⚠️ Channel ${index + 1} has no codecs! This will result in incomplete m= line.`);
@@ -545,12 +779,148 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
     }
   };
 
-  const handleAuthSuccess = () => {
-    handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+  // Handler for removing a saved invite by name
+  const handleRemoveSavedInvite = (name: string) => {
+    // Check if this is a user-created message (stored in localStorage grouped structure)
+    const localGroups = JSON.parse(localStorage.getItem('sipSavedMessages') || '{}');
+    let isUserMessage = false;
+    let foundInGroup = '';
+    
+    // Find which group contains this message
+    Object.keys(localGroups).forEach(groupName => {
+      if (localGroups[groupName].some((msg: any) => msg.Name === name)) {
+        isUserMessage = true;
+        foundInGroup = groupName;
+      }
+    });
+    
+    if (isUserMessage) {
+      // Remove from localStorage grouped structure
+      localGroups[foundInGroup] = localGroups[foundInGroup].filter((msg: any) => msg.Name !== name);
+      
+      // Remove empty groups
+      if (localGroups[foundInGroup].length === 0) {
+        delete localGroups[foundInGroup];
+      }
+      
+      localStorage.setItem('sipSavedMessages', JSON.stringify(localGroups));
+      
+      // Update grouped invites state
+      setGroupedInvites(prev => {
+        const updated = { ...prev };
+        if (updated[foundInGroup]) {
+          updated[foundInGroup] = updated[foundInGroup].filter(msg => msg.Name !== name);
+          if (updated[foundInGroup].length === 0) {
+            delete updated[foundInGroup];
+          }
+        }
+        return updated;
+      });
+    }
+    
+    // Remove from current display
+    setSavedMessages(prev => prev.filter(msg => msg.Name !== name));
+  };
+
+  // Handler for saving the current request with a name from the text box
+  const handleSaveRequest = () => {
+    const name = inviteName.trim();
+    if (!name) return;
+    if (savedMessages.some(msg => msg.Name === name)) {
+      alert('A saved message with this name already exists. Please choose a different name.');
+      return;
+    }
+    
+    // Show dialog to select group
+    setShowSaveDialog(true);
+  };
+
+  // Handler for confirming save with group selection
+  const handleConfirmSave = () => {
+    if (!saveToGroup.trim()) {
+      alert('Please select or enter a group name.');
+      return;
+    }
+    
+    const name = inviteName.trim();
+    const invite = generateSipInvitePreview();
+    const groupName = saveToGroup.trim();
+    
+    // Update grouped invites
+    setGroupedInvites(prev => {
+      const updated = { ...prev };
+      if (!updated[groupName]) {
+        updated[groupName] = [];
+      }
+      updated[groupName] = [...updated[groupName], { Name: name, Invite: invite }];
+      return updated;
+    });
+    
+    // Update flat savedMessages for backward compatibility
+    setSavedMessages(prev => [...prev, { Name: name, Invite: invite }]);
+    
+    // Reset form
+    setInviteName("");
+    setShowSaveInput(false);
+    setShowSaveDialog(false);
+    setSaveToGroup('');
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 4000);
+  };
+
+  // Handler for resetting invite form
+  const handleResetInvite = () => {
+    setShowResetDialog(true);
+  };
+
+  const handleConfirmReset = () => {
+    // Reset form to default values
+    setFormData({
+      sipTesterId: '',
+      destinationAddress: {
+        ip: '',
+        port: 5060,
+        transportProtocol: 'UDP' as TransportProtocol,
+        alias: '',
+      },
+      customHeaders: {},
+      sdp: {
+        sessionVersion: 1,
+        origin: {
+          userName: 'test',
+          sessionId: '1234567890',
+          sessionVersion: 1,
+          networkType: 'IN' as const,
+          addressType: 'IP4' as const,
+          ip: '127.0.0.1',
+        },
+        sessionName: 'Test Session',
+        sessionInformation: '',
+        connection: {
+          networkType: 'IN' as const,
+          addressType: 'IP4' as const,
+          ip: '127.0.0.1',
+        },
+        timing: {
+          startTime: 0,
+          stopTime: 0,
+        },
+        channels: [],
+      },
+    });
+    
+    // Reset other states
+    setWithCLine(true);
+    setShowResetDialog(false);
   };
 
   return (
     <Box>
+      {saveSuccess && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          Successfully saved
+        </Alert>
+      )}
       <Paper elevation={2} sx={{ p: 3 }}>
         <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -597,38 +967,203 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
           </Alert>
         )}
 
-        {/* Tabs for Manual Form vs Raw Invite */}
+        {/* Tabs for Manual Form vs Raw Invite vs Saved Messages */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-          <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
-            <Tab label="Manual Form" />
-            <Tab label="Send Existing Invite" />
-          </Tabs>
-        </Box>
-
-        {/* Tab Content */}
-        {activeTab === 0 ? (
-          // Manual Form Tab
-          <form onSubmit={handleSubmit}>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-              gap: 3,
+          <Tabs
+            value={activeTab}
+            onChange={async (_, newValue) => {
+              setActiveTab(newValue);
+              if (newValue === 2) {
+                await reloadInvites();
+              }
             }}
           >
-            <TextInput
-              id="sipTesterId"
-              label="SIP Tester ID"
-              value={formData.sipTesterId}
-              onChange={(value) => setFormData(prev => ({ ...prev, sipTesterId: value }))}
-              placeholder="Enter SIP Tester ID"
-              helperText="UUID of the SIP tester"
-              required
-            />
+            <Tab label="Manual Form" />
+            <Tab label="Send Existing Invite" />
+            <Tab label="Your Saved Messages" />
+          </Tabs>
+        </Box>
+        {activeTab === 0 && (
+          // Manual Form Tab
+          <form onSubmit={handleSubmit}>
+            {/* Mobile Preview Accordion (shown on smaller screens) */}
+            <Box sx={{ display: { xs: 'block', lg: 'none' }, mb: 3 }}>
+              <Accordion>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <ContentCopyIcon fontSize="small" color="primary" />
+                    <Typography variant="h6" color="primary">
+                      🔍 SIP INVITE Preview
+                    </Typography>
+                    <Chip
+                      label="Live"
+                      size="small"
+                      color="primary"
+                      variant="filled"
+                      sx={{ ml: 1 }}
+                    />
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Live preview of your SIP INVITE message. Values in [BRACKETS] are auto-generated.
+                  </Typography>
+                  <Paper
+                    sx={{
+                      p: 2,
+                      backgroundColor: '#fafafa',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: 1,
+                      maxHeight: '40vh',
+                      overflow: 'auto',
+                    }}
+                  >
 
-            <Typography variant="h6" sx={{ mt: 2, mb: 1, gridColumn: { md: '1 / -1' } }}>
-              Destination Address
-            </Typography>
+                  
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Generated Message
+                      </Typography>
+                      <Box
+                        component="span"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(generateSipInvitePreview());
+                        }}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.5,
+                          fontSize: '0.75rem',
+                          color: 'primary.main',
+                          cursor: 'pointer',
+                          padding: '4px 8px',
+                          borderRadius: 1,
+                          backgroundColor: '#fff',
+                          border: '1px solid #e0e0e0',
+                          '&:hover': {
+                            backgroundColor: 'primary.main',
+                            color: 'white',
+                          }
+                        }}
+                      >
+                        <ContentCopyIcon fontSize="small" />
+                        Copy
+                      </Box>
+                    </Box>
+                    <Typography
+                      component="pre"
+                      sx={{
+                        fontFamily: 'monospace',
+                        fontSize: '0.75rem',
+                        lineHeight: 1.3,
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-all',
+                        margin: 0,
+                        color: '#333',
+                      }}
+                    >
+                      {generateSipInvitePreview()}
+                    </Typography>
+                  </Paper>
+                </AccordionDetails>
+              </Accordion>
+              {/* Add Save Request and Reset button below the mobile preview */}
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                {!showSaveInput && (
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                      variant="outlined"
+                      color="warning"
+                      size="small"
+                      onClick={handleResetInvite}
+                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                    >
+                      Reset Invite
+                    </Button>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      size="small"
+                      onClick={() => setShowSaveInput(true)}
+                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                    >
+                      Save Request
+                    </Button>
+                  </Box>
+                )}
+                {showSaveInput && (
+                  saveSuccess ? (
+                    <Alert severity="success" sx={{ minWidth: 180 }}>
+                      Successfully saved
+                    </Alert>
+                  ) : (
+                    <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                      <TextField
+                        size="small"
+                        label="Invite Name"
+                        variant="outlined"
+                        value={inviteName}
+                        onChange={e => setInviteName(e.target.value)}
+                        sx={{ minWidth: 180, background: '#fff', borderRadius: 2 }}
+                        inputProps={{ maxLength: 64 }}
+                        autoFocus
+                      />
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        size="small"
+                        onClick={handleSaveRequest}
+                        sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                        disabled={!inviteName.trim() || savedMessages.some(msg => msg.Name === inviteName.trim())}
+                      >
+                        Confirm
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        size="small"
+                        onClick={() => { setShowSaveInput(false); setInviteName(""); }}
+                        sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                      >
+                        Cancel
+                      </Button>
+                    </Box>
+                  )
+                )}
+              </Box>
+            </Box>
+
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', lg: '3fr 2.5fr' },
+                gap: 3,
+                alignItems: 'start',
+              }}
+            >
+
+              {/* Right Column - Form Fields */}
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                  gap: 3,
+              }}
+            >
+              <TextInput
+                id="sipTesterId"
+                label="SIP Tester ID"
+                value={formData.sipTesterId}
+                onChange={(value) => setFormData(prev => ({ ...prev, sipTesterId: value }))}
+                placeholder="Enter SIP Tester ID"
+                helperText="UUID of the SIP tester"
+                required
+              />
+
+              <Typography variant="h6" sx={{ mt: 2, mb: 1, gridColumn: { md: '1 / -1' } }}>
+                Destination Address
+              </Typography>
 
             <TextInput
               id="destinationIp"
@@ -671,8 +1206,8 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                 destinationAddress: {
                   ...prev.destinationAddress,
                   transportProtocol: value as TransportProtocol
-                }
-              }))}
+                }}
+              ))}
               options={[
                 { value: 'UDP', label: 'UDP' },
                 { value: 'TCP', label: 'TCP' },
@@ -682,24 +1217,24 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
               helperText="Transport protocol for SIP communication"
             />
 
-            <TextInput
-              id="destinationAlias"
-              label="Destination Alias (Optional)"
-              value={formData.destinationAddress.alias || ''}
-              onChange={(value) => setFormData(prev => ({
-                ...prev,
-                destinationAddress: {
-                  ...prev.destinationAddress,
-                  alias: value
-                }
-              }))}
-              placeholder="destination-alias"
-              helperText="Optional alias for the destination"
-            />
+              <TextInput
+                id="destinationAlias"
+                label="Destination Alias (Optional)"
+                value={formData.destinationAddress.alias || ''}
+                onChange={(value) => setFormData(prev => ({
+                  ...prev,
+                  destinationAddress: {
+                    ...prev.destinationAddress,
+                    alias: value
+                  }
+                }))}
+                placeholder="destination-alias"
+                helperText="Optional alias for the destination"
+              />
 
-            <Typography variant="h6" sx={{ mt: 2, mb: 1, gridColumn: { md: '1 / -1' } }}>
-              SDP Configuration
-            </Typography>
+              <Typography variant="h6" sx={{ mt: 2, mb: 1, gridColumn: { md: '1 / -1' } }}>
+                SDP Configuration
+              </Typography>
 
             {/* Basic SDP Fields */}
             <NumberInput
@@ -881,12 +1416,26 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                 </AccordionDetails>
               </Accordion>
 
-              {/* Connection Accordion */}
-              <Accordion sx={{ mt: 1 }}>
+
+
+                <Accordion sx={{ mt: 1 }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Typography variant="subtitle1">Connection Configuration</Typography>
                 </AccordionSummary>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={withCLine}
+                        onChange={(_, checked) => setWithCLine(checked)}
+                        color="primary"
+                      />
+                    }
+                    label="With C-line on the top (Connection Information)"
+                    sx={{ mb: 2 }}
+                  />
+                  {withCLine && (
                 <AccordionDetails>
+
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <Dropdown
                       id="connection-networkType"
@@ -911,7 +1460,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
 
                     <Dropdown
                       id="connection-addressType"
-                      label="Address Type"
+                      label="Address Type (Optional)"
                       value={formData.sdp.connection.addressType}
                       onChange={(value) => setFormData(prev => ({
                         ...prev,
@@ -927,13 +1476,12 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                         { value: 'IP4', label: 'IPv4' },
                         { value: 'IP6', label: 'IPv6' }
                       ]}
-                      required
-                      helperText="IP address type"
+                      helperText="IP address type (Optional, defaults to IPv4 if not specified)"
                     />
 
                     <TextInput
                       id="connection-ip"
-                      label="Connection IP"
+                      label="Connection IP (Optional)"
                       value={formData.sdp.connection.ip}
                       onChange={(value) => setFormData(prev => ({
                         ...prev,
@@ -946,12 +1494,12 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                         }
                       }))}
                       placeholder="127.0.0.1"
-                      helperText="Connection IP address"
-                      required
+                      helperText="Connection IP address (Optional)"
                     />
                   </Box>
-                </AccordionDetails>
+                </AccordionDetails>)}
               </Accordion>
+
 
               {/* Timing Accordion */}
               <Accordion sx={{ mt: 1 }}>
@@ -1092,7 +1640,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                                   setShowCustomCodecInput(prev => ({ ...prev, [index]: true }));
                                   // Remove "other" from the values and update with actual codecs only
                                   const numericCodecs = values.filter(v => v !== 'other').map(v => parseInt(v)).filter(n => !isNaN(n));
-                                  
+
                                   setFormData(prev => ({
                                     ...prev,
                                     sdp: {
@@ -1108,10 +1656,10 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                                     setShowCustomCodecInput(prev => ({ ...prev, [index]: false }));
                                     setCustomCodecValues(prev => ({ ...prev, [index]: '' }));
                                   }
-                                  
+
                                   // Normal codec selection
                                   const numericCodecs = values.map(v => parseInt(v)).filter(n => !isNaN(n));
-                                  
+
                                   setFormData(prev => ({
                                     ...prev,
                                     sdp: {
@@ -1138,7 +1686,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                               helperText="Select one or more audio codecs"
                               required
                             />
-                            
+
                             {/* Show custom codec input only when "other" is selected */}
                             {showCustomCodecInput[index] && (
                               <Box sx={{ mt: 2 }}>
@@ -1149,7 +1697,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                                   onChange={(value) => {
                                     setCustomCodecValues(prev => ({ ...prev, [index]: value }));
                                   }}
-                                  placeholder="Enter codec number(s) (e.g., 96 or 96,97,98)"
+                                  placeholder="Enter codec number(s) (e.g., 99 or 96,97,98)"
                                   helperText="Add custom codec numbers - click button to add them"
                                   size="small"
                                 />
@@ -1158,7 +1706,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                                     const value = customCodecValues[index];
                                     if (value && value.trim()) {
                                       const customCodecs = value.split(',').map(v => parseInt(v.trim())).filter(n => !isNaN(n) && n > 0);
-                                      
+
                                       if (customCodecs.length > 0) {
                                         setFormData(prev => ({
                                           ...prev,
@@ -1168,20 +1716,20 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                                               if (i === index) {
                                                 const existingCodecs = ch.codecs || [];
                                                 const newCodecs = [...existingCodecs];
-                                                
+
                                                 customCodecs.forEach(codec => {
                                                   if (!newCodecs.includes(codec)) {
                                                     newCodecs.push(codec);
                                                   }
                                                 });
-                                                
+
                                                 return { ...ch, codecs: newCodecs };
                                               }
                                               return ch;
                                             })
                                           }
                                         }));
-                                        
+
                                         // Clear the input after adding
                                         setCustomCodecValues(prev => ({ ...prev, [index]: '' }));
                                       }
@@ -1351,23 +1899,21 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                           />
                         </Box>
 
-                        {formData.sdp.channels.length > 1 && (
-                          <Button
-                            variant="outlined"
-                            color="error"
-                            size="small"
-                            sx={{ mt: 2 }}
-                            onClick={() => setFormData(prev => ({
-                              ...prev,
-                              sdp: {
-                                ...prev.sdp,
-                                channels: prev.sdp.channels.filter((_, i) => i !== index)
-                              }
-                            }))}
-                          >
-                            Remove Channel
-                          </Button>
-                        )}
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          size="small"
+                          sx={{ mt: 2 }}
+                          onClick={() => setFormData(prev => ({
+                            ...prev,
+                            sdp: {
+                              ...prev.sdp,
+                              channels: prev.sdp.channels.filter((_, i) => i !== index)
+                            }
+                          }))}
+                        >
+                          Remove Channel
+                        </Button>
                       </Box>
                     ))
                     )}
@@ -1404,14 +1950,167 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
             </Box>
           </Box>
 
-          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-              {authState.isAuthenticated
-                ? 'Ready to send SIP INVITE'
-                : 'Authentication will be requested when you send the invite'
-              }
-            </Typography>
+              {/* Left Column - SIP Message Preview */}
+              <Box sx={{
+                position: 'sticky',
+                top: 0,
+                height: 'fit-content',
+                display: { xs: 'none', lg: 'block' }
+              }}>
+                <Box sx={{ border: '2px solid #1976d2', borderRadius: 2, backgroundColor: '#fff' }}>
+                  <Box
+                    sx={{
+                      backgroundColor: 'rgba(25,118,210,0.1)',
+                      borderRadius: '8px 8px 0 0',
+                      p: 2,
+                      borderBottom: '1px solid #e0e0e0'
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <ContentCopyIcon fontSize="small" color="primary" />
+                      <Typography variant="h6" color="primary" sx={{ fontWeight: 600 }}>
+                        🔍 SIP INVITE Preview
+                      </Typography>
+                      <Chip
+                        label="Live"
+                        size="small"
+                        color="primary"
+                        variant="filled"
+                        sx={{ ml: 1, fontWeight: 500 }}
+                      />
+                    </Box>
+                  </Box>
+                  <Box sx={{ p: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Live preview of your SIP INVITE message. Values in [BRACKETS] are auto-generated.
+                    </Typography>
+                    <Paper
+                      sx={{
+                        p: 2,
+                        backgroundColor: '#fafafa',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: 1,
+                        height: '60vh',
+                        overflow: 'auto',
+                        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                          Generated Message
+                        </Typography>
+                        <Box
+                          component="span"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(generateSipInvitePreview());
+                          }}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            fontSize: '0.75rem',
+                            color: 'primary.main',
+                            cursor: 'pointer',
+                            padding: '4px 8px',
+                            borderRadius: 1,
+                            backgroundColor: '#fff',
+                            border: '1px solid #e0e0e0',
+                            '&:hover': {
+                              backgroundColor: 'primary.main',
+                              color: 'white',
+                            }
+                          }}
+                        >
+                          <ContentCopyIcon fontSize="small" />
+                          Copy
+                        </Box>
+                      </Box>
+                      <Typography
+                        component="pre"
+                        sx={{
+                          fontFamily: 'monospace',
+                          fontSize: '0.75rem',
+                          lineHeight: 1.3,
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-all',
+                          margin: 0,
+                          color: '#333',
+                        }}
+                      >
+                        {generateSipInvitePreview()}
+                      </Typography>
+                      {/* Add Save Request and Reset button below the desktop preview */}
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 22, flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                        {!showSaveInput && (
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                              variant="outlined"
+                              color="warning"
+                              size="small"
+                              onClick={handleResetInvite}
+                              sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                            >
+                              Reset Invite
+                            </Button>
+                            <Button
+                              variant="contained"
+                              color="success"
+                              size="small"
+                              onClick={() => setShowSaveInput(true)}
+                              sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                            >
+                              Save Request
+                            </Button>
+                          </Box>
+                        )}
+                        {showSaveInput && (
+                          saveSuccess ? (
+                            <Alert severity="success" sx={{ minWidth: 180 }}>
+                              Successfully saved
+                            </Alert>
+                          ) : (
+                            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                              <TextField
+                                size="small"
+                                label="Invite Name"
+                                variant="outlined"
+                                value={inviteName}
+                                onChange={e => setInviteName(e.target.value)}
+                                sx={{ minWidth: 180, background: '#fff', borderRadius: 2 }}
+                                inputProps={{ maxLength: 64 }}
+                                autoFocus
+                              />
+                              <Button
+                                variant="contained"
+                                color="primary"
+                                size="small"
+                                onClick={handleSaveRequest}
+                                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                                disabled={!inviteName.trim() || savedMessages.some(msg => msg.Name === inviteName.trim())}
+                              >
+                                Confirm
+                              </Button>
+                              <Button
+                                variant="outlined"
+                                color="secondary"
+                                size="small"
+                                onClick={() => { setShowSaveInput(false); setInviteName(""); }}
+                                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                              >
+                                Cancel
+                              </Button>
+                            </Box>
+                          )
+                        )}
+                      </Box>
+                    </Paper>
+                  </Box>
+                </Box>
+              </Box>
 
+
+              <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gridColumn: { xs: '1 / -1' } }}>
             <Button
               type="submit"
               variant="contained"
@@ -1423,14 +2122,16 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
               {isLoading ? 'Sending...' : 'Send REQUEST'}
             </Button>
           </Box>
+            </Box>
           </form>
-        ) : (
+        )}
+        {activeTab === 1 && (
           // Raw Invite Tab
           <Box>
             <Typography variant="h6" sx={{ mb: 2 }}>
               Paste Your SIP INVITE Message
             </Typography>
-            
+
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Copy and paste the complete SIP INVITE message below. The parser will extract all fields and populate the manual form.
             </Typography>
@@ -1492,7 +2193,7 @@ a=sendonly`}
               >
                 Clear
               </Button>
-              
+
               <Button
                 variant="contained"
                 startIcon={<ContentCopyIcon />}
@@ -1501,6 +2202,12 @@ a=sendonly`}
               >
                 Parse & Use INVITE
               </Button>
+
+              {saveSuccess && (
+                <Alert severity="success" sx={{ mt: 2 }}>
+                  Invite saved successfully!
+                </Alert>
+              )}
             </Box>
 
             {rawInviteText && formData.sipTesterId && (
@@ -1508,6 +2215,116 @@ a=sendonly`}
                 <Alert severity="info">
                   Click "Parse & Use INVITE" to extract the invite details and switch to the manual form, then click "Send INVITE" to execute it.
                 </Alert>
+              </Box>
+            )}
+          </Box>
+        )}
+        {activeTab === 2 && (
+          // Saved Messages Tab with Groups
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, justifyContent: 'space-between' }}>
+              <Typography variant="h6">Your Saved SIP INVITE Messages</Typography>
+              <Tooltip title="Reload invites from file">
+                <IconButton onClick={reloadInvites} size="small" color="primary">
+                  <RefreshIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
+
+            {Object.keys(groupedInvites).length === 0 ? (
+              <Typography color="text.secondary">No saved invites found.</Typography>
+            ) : (
+              <Box>
+                {Object.entries(groupedInvites).map(([groupName, groupInvites]) => (
+                  <Box key={groupName} sx={{ mb: 3 }}>
+                    <Accordion sx={{ mb: 1 }}>
+                      <AccordionSummary
+                        expandIcon={<ExpandMoreIcon />}
+                        sx={{
+                          background: 'linear-gradient(90deg, #e3f2fd 0%, #f5fafd 100%)',
+                          borderRadius: 2,
+                          '&:hover': {
+                            background: 'linear-gradient(90deg, #bbdefb 0%, #e1f5fe 100%)',
+                          },
+                        }}
+                      >
+                        <Typography variant="h6" sx={{ color: '#1976d2', fontWeight: 600 }}>
+                          📁 {groupName} ({groupInvites.length} invites)
+                        </Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Box>
+                          {groupInvites.map((msg, idx) => (
+                            <Accordion
+                              key={`${groupName}-${msg.Name}`}
+                              expanded={expandedIndex === `${groupName}-${idx}`}
+                              onChange={async (_, isExpanded) => {
+                                await reloadInvites();
+                                setExpandedIndex(isExpanded ? `${groupName}-${idx}` : false);
+                              }}
+                              sx={{ mb: 1 }}
+                            >
+                              <AccordionSummary
+                                expandIcon={<ExpandMoreIcon />}
+                                sx={{
+                                  background: expandedIndex === `${groupName}-${idx}`
+                                    ? 'linear-gradient(90deg, #f3e5f5 0%, #fce4ec 100%)'
+                                    : '#fafbfc',
+                                  borderRadius: 1,
+                                  transition: 'background 0.2s',
+                                  '&:hover': {
+                                    background: 'linear-gradient(90deg, #f3e5f5 0%, #fce4ec 100%)',
+                                  },
+                                }}
+                              >
+                                <Typography sx={{ fontWeight: 500, color: '#7b1fa2' }}>
+                                  {msg.Name}
+                                </Typography>
+                              </AccordionSummary>
+                              <AccordionDetails>
+                                <TextField
+                                  fullWidth
+                                  multiline
+                                  rows={12}
+                                  value={msg.Invite}
+                                  InputProps={{ readOnly: true }}
+                                  label="SIP INVITE Message"
+                                  sx={{ mb: 2, fontFamily: 'monospace', background: '#f7f7fa', borderRadius: 1 }}
+                                />
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                                  <Button
+                                    variant="contained"
+                                    startIcon={<ContentCopyIcon />}
+                                    onClick={() => {
+                                      setRawInviteText(msg.Invite);
+                                      setActiveTab(1);
+                                    }}
+                                  >
+                                    Parse & Use Invite
+                                  </Button>
+                                  {(() => {
+                                    // Check if this message is user-created (in localStorage)
+                                    const localGroups = JSON.parse(localStorage.getItem('sipSavedMessages') || '{}');
+                                    return localGroups[groupName]?.some((m: any) => m.Name === msg.Name);
+                                  })() && (
+                                    <Button
+                                      variant="outlined"
+                                      color="error"
+                                      onClick={() => handleRemoveSavedInvite(msg.Name)}
+                                      sx={{ minWidth: 0, padding: '6px 8px' }}
+                                    >
+                                      <span role="img" aria-label="Delete">🗑️</span>
+                                    </Button>
+                                  )}
+                                </Box>
+                              </AccordionDetails>
+                            </Accordion>
+                          ))}
+                        </Box>
+                      </AccordionDetails>
+                    </Accordion>
+                  </Box>
+                ))}
               </Box>
             )}
           </Box>
@@ -1528,6 +2345,76 @@ a=sendonly`}
         title="Authentication Required for SIP Testing"
         message="Please sign in to send SIP INVITE requests."
       />
+
+      {/* Save Invite Dialog */}
+      <Dialog open={showSaveDialog} onClose={() => setShowSaveDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Save SIP INVITE to Group</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              fullWidth
+              label="Invite Name"
+              value={inviteName}
+              onChange={(e) => setInviteName(e.target.value)}
+              sx={{ mb: 2 }}
+              autoFocus
+            />
+            <FormControl fullWidth>
+              <InputLabel>Select Group</InputLabel>
+              <Select
+                value={saveToGroup}
+                label="Select Group"
+                onChange={(e) => setSaveToGroup(e.target.value)}
+              >
+                {Object.keys(groupedInvites).map((groupName) => (
+                  <MenuItem key={groupName} value={groupName}>
+                    {groupName}
+                  </MenuItem>
+                ))}
+                <MenuItem value="">
+                  <em>Create new group...</em>
+                </MenuItem>
+              </Select>
+            </FormControl>
+            {!saveToGroup && (
+              <TextField
+                fullWidth
+                label="New Group Name"
+                value={saveToGroup}
+                onChange={(e) => setSaveToGroup(e.target.value)}
+                sx={{ mt: 2 }}
+                placeholder="Enter new group name"
+              />
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowSaveDialog(false)}>Cancel</Button>
+          <Button 
+            onClick={handleConfirmSave} 
+            variant="contained"
+            disabled={!inviteName.trim() || !saveToGroup.trim()}
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Reset Invite Dialog */}
+      <Dialog open={showResetDialog} onClose={() => setShowResetDialog(false)}>
+        <DialogTitle>Reset SIP INVITE Form</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to reset the invite form? All current form data will be lost and reset to default values.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowResetDialog(false)}>Cancel</Button>
+          <Button onClick={handleConfirmReset} variant="contained" color="warning">
+            Yes, Reset
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

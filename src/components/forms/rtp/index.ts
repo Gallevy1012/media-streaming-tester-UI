@@ -1,1 +1,1 @@
-export { RtpTestForm } from './RtpTestForm_new';
+export { RtpTestForm } from './RtpTestForm';
