@@ -61,6 +61,7 @@ interface MediaFormData {
   sipSessionExpiration?: number | null;
   isGlobalIpReceiver?: boolean;
   isLocalRun?: boolean;
+  automaticSourceAddressesGeneration?: boolean;
 
   // Send invite fields
   destinationAddress?: {
@@ -125,8 +126,9 @@ interface MediaFormData {
 }
 
 export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'create-media-tester', onTestComplete, onBack }) => {
+  console.log('🚀 MediaTestForm rendering with functionId:', functionId);
   const [searchParams] = useSearchParams();
-  
+
   // Add state for tabs and raw invite parsing (only for send-invite function)
   const [activeTab, setActiveTab] = useState(0);
   const [rawInviteText, setRawInviteText] = useState('');
@@ -226,7 +228,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
         return {
           requestId: '',
           testerKeyName: 'media-tester-default',
-          testerRole: 'DEFAULT_CLIENT' as TesterRole,
+          testerRole: 'AVAYA_SBC' as TesterRole,
           ip: '127.0.0.1',
           port: 5060,
           transportProtocol: 'UDP' as TransportProtocol,
@@ -243,9 +245,19 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
           sipSessionExpiration: null,
           isGlobalIpReceiver: false,
           isLocalRun: false,
+          automaticSourceAddressesGeneration: true,
         };
     }
   });
+
+  // Effect to handle automatic source address generation
+  useEffect(() => {
+    console.log('🔧 Autogenerate effect triggered:', formData.automaticSourceAddressesGeneration);
+    if (formData.automaticSourceAddressesGeneration) {
+      console.log('🔧 Setting IP to 0.0.0.0');
+      setFormData(prev => ({ ...prev, ip: '0.0.0.0' }));
+    }
+  }, [formData.automaticSourceAddressesGeneration]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -286,7 +298,6 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
   const parseSipInvite = (sipInviteText: string): Partial<MediaFormData> | null => {
     try {
       setParseError(null);
-      
       const lines = sipInviteText.trim().split('\n');
       const parsed: Partial<MediaFormData> = {
         destinationAddress: {
@@ -326,7 +337,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
 
       for (const line of lines) {
         const trimmedLine = line.trim();
-        
+
         // Skip empty lines
         if (!trimmedLine) continue;
 
@@ -371,7 +382,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
           const colonIndex = trimmedLine.indexOf(':');
           const headerName = trimmedLine.substring(0, colonIndex).trim();
           const headerValue = trimmedLine.substring(colonIndex + 1).trim();
-          
+
           // Store custom headers (excluding standard ones we handle separately)
           if (!['Via', 'Max-Forwards', 'Call-ID', 'CSeq', 'Contact', 'Content-Type', 'Content-Length', 'MIME-Version'].includes(headerName)) {
             parsed.customHeaders![headerName] = headerValue;
@@ -396,7 +407,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
 
   // SDP parsing function (for send-invite function)
   const parseSdpSection = (sdpLines: string[]) => {
-    
+
     const sdp: any = {
       sessionVersion: 0,
       sessionName: 'Media Test Session',
@@ -463,14 +474,14 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
       } else if (line.startsWith('m=')) {
         // Parse media: m=audio 6304 RTP/AVP 0 8 18 127
         const parts = line.substring(2).split(' ');
-        
+
         if (parts.length >= 3) {
           // Save previous channel if exists
           if (currentChannel) {
             channelCount++;
             sdp.channels.push(currentChannel);
           }
-          
+
           // Convert SDP transport protocol format to enum format
           let transportProtocol = parts[2];
           if (transportProtocol === 'RTP/AVP') {
@@ -478,11 +489,11 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
           } else if (transportProtocol === 'RTP/SAVP') {
             transportProtocol = 'RTP_SAVP';
           }
-          
+
           // Extract codecs (numbers after transport protocol) - THIS IS KEY!
           const codecParts = parts.slice(3); // Get everything after transport protocol
           const codecs = codecParts.map(codec => parseInt(codec)).filter(codec => !isNaN(codec));
-          
+
           currentChannel = {
             mediaType: parts[0].toUpperCase(),
             port: parseInt(parts[1]),
@@ -536,10 +547,10 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
     }
 
     // Filter out invalid channels (those without proper mediaType or port)
-    const validChannels = sdp.channels.filter((channel: any) => 
-      channel.mediaType && 
-      channel.port && 
-      channel.port > 0 && 
+    const validChannels = sdp.channels.filter((channel: any) =>
+      channel.mediaType &&
+      channel.port &&
+      channel.port > 0 &&
       channel.transportProtocol
     );
 
@@ -568,7 +579,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
           channels: parsed.sdp.channels || []
         } : prev.sdp,
       }));
-      
+
       setActiveTab(0); // Switch to manual form tab
       setParseError(null);
     }
@@ -822,7 +833,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
           const config = {
             sipTesterConfig: {
               testerKeyName: formData.testerKeyName.trim(),
-              testerRole: formData.testerRole || 'DEFAULT_CLIENT',
+              testerRole: formData.testerRole || 'AVAYA_SBC',
               listeningAddress: {
                 ip: formData.ip.trim(),
                 port: formData.port || 5060,
@@ -853,17 +864,17 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
 
       if (testResult) {
         setResult(testResult);
-        
+
         // If this was a send-bye request and it was successful, remove the dialog ID
-        if (functionId === 'send-bye' && 
-            testResult.success !== false && 
+        if (functionId === 'send-bye' &&
+            testResult.success !== false &&
             (!testResult.status || testResult.status === 200 || testResult.status < 400) &&
-            formData.mediaTesterId?.trim() && 
+            formData.mediaTesterId?.trim() &&
             formData.dialogId?.trim()) {
-          
+
           removeDialogId(formData.mediaTesterId.trim(), formData.dialogId.trim(), 'media-tester');
         }
-        
+
         onTestComplete?.(testResult);
       }
 
@@ -943,7 +954,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
             <Typography variant="h6" sx={{ mb: 2 }}>
               Paste Your SIP INVITE Message
             </Typography>
-            
+
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Copy and paste the complete SIP INVITE message below. The parser will extract all fields and populate the manual form.
             </Typography>
@@ -1005,7 +1016,7 @@ a=sendonly`}
               >
                 Clear
               </Button>
-              
+
               <Button
                 variant="contained"
                 startIcon={<ContentCopyIcon />}
@@ -1582,7 +1593,7 @@ a=sendonly`}
                                     setShowCustomCodecInput(prev => ({ ...prev, [index]: true }));
                                     // Remove "other" from the values and update with actual codecs only
                                     const numericCodecs = values.filter(v => v !== 'other').map(v => parseInt(v)).filter(n => !isNaN(n));
-                                    
+
                                     setFormData(prev => ({
                                       ...prev,
                                       sdp: {
@@ -1598,10 +1609,10 @@ a=sendonly`}
                                       setShowCustomCodecInput(prev => ({ ...prev, [index]: false }));
                                       setCustomCodecValues(prev => ({ ...prev, [index]: '' }));
                                     }
-                                    
+
                                     // Normal codec selection
                                     const numericCodecs = values.map(v => parseInt(v)).filter(n => !isNaN(n));
-                                    
+
                                     setFormData(prev => ({
                                       ...prev,
                                       sdp: {
@@ -1628,7 +1639,7 @@ a=sendonly`}
                                 helperText="Select one or more audio codecs"
                                 required
                               />
-                              
+
                               {/* Show custom codec input only when "other" is selected */}
                               {showCustomCodecInput[index] && (
                                 <Box sx={{ mt: 2 }}>
@@ -1648,7 +1659,7 @@ a=sendonly`}
                                       const value = customCodecValues[index];
                                       if (value && value.trim()) {
                                         const customCodecs = value.split(',').map(v => parseInt(v.trim())).filter(n => !isNaN(n) && n > 0);
-                                        
+
                                         if (customCodecs.length > 0) {
                                           setFormData(prev => ({
                                             ...prev,
@@ -1658,20 +1669,20 @@ a=sendonly`}
                                                 if (i === index) {
                                                   const existingCodecs = ch.codecs || [];
                                                   const newCodecs = [...existingCodecs];
-                                                  
+
                                                   customCodecs.forEach(codec => {
                                                     if (!newCodecs.includes(codec)) {
                                                       newCodecs.push(codec);
                                                     }
                                                   });
-                                                  
+
                                                   return { ...ch, codecs: newCodecs };
                                                 }
                                                 return ch;
                                               })
                                             }
                                           }));
-                                          
+
                                           // Clear the input after adding
                                           setCustomCodecValues(prev => ({ ...prev, [index]: '' }));
                                         }
@@ -1910,9 +1921,9 @@ a=sendonly`}
                 <NumberInput
                   id="timeout"
                   label="Timeout (ms)"
-                  value={formData.timeout || 5000}
+                  value={formData.timeout || 5}
                   onChange={handleInputChange('timeout')}
-                  helperText="Query timeout in milliseconds"
+                  helperText="Query timeout in seconds"
                   required
                 />
 
@@ -2059,11 +2070,18 @@ a=sendonly`}
                 <Dropdown
                   id="testerRole"
                   label="Tester Role"
-                  value={formData.testerRole || 'DEFAULT_CLIENT'}
+                  value={formData.testerRole || 'AVAYA_SBC'}
                   onChange={handleInputChange('testerRole')}
                   options={[
-                    { value: 'DEFAULT_CLIENT', label: 'Default Client' },
-                    { value: 'DEFAULT_SERVER', label: 'Default Server' },
+                    { value: 'AVAYA_SBC', label: 'Avaya SBC' },
+                    { value: 'CISCO_SBC', label: 'Cisco SBC' },
+                    { value: 'TEAMS_SBC', label: 'Teams SBC' },
+                    { value: 'RECORDER', label: 'Recorder' },
+                    { value: 'SUPERVISOR', label: 'Supervisor' },
+                    { value: 'RTIG', label: 'RTIG' },
+                    { value: 'ESFU', label: 'ESFU' },
+                    { value: 'SIP_LB', label: 'SIP-LB' },
+                    { value: 'VRSP', label: 'VRSP' },
                   ]}
                   helperText="Role of the media tester"
                   required
@@ -2076,6 +2094,7 @@ a=sendonly`}
                   onChange={handleInputChange('ip')}
                   placeholder="127.0.0.1"
                   helperText="IP address for the media tester"
+                  disabled={formData.automaticSourceAddressesGeneration}
                   required
                 />
 
@@ -2140,6 +2159,15 @@ a=sendonly`}
                     Configuration Options
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={formData.automaticSourceAddressesGeneration || false}
+                          onChange={(e) => handleInputChange('automaticSourceAddressesGeneration')(e.target.checked)}
+                        />
+                      }
+                      label="Automatic Source Addresses Generation"
+                    />
                     <FormControlLabel
                       control={
                         <Switch
@@ -2211,5 +2239,6 @@ a=sendonly`}
         message="Please sign in to send media test requests to the MS-Tester service."
       />
     </Box>
+
   );
 };

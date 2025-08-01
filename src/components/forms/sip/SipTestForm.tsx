@@ -169,7 +169,7 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
           requestId: '',
           testerId: '',
           dialogId: '',
-          timeout: 5000,
+          timeout: 5,
           sipComparator: {},
         };
       default: // create-tester
@@ -181,7 +181,7 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
 
           // SipTesterConfig fields
           testerKeyName: 'sip-tester-default',
-          testerRole: 'DEFAULT_CLIENT' as TesterRole,
+          testerRole: 'AVAYA_SBC' as TesterRole,
 
           // CommunicationAddress fields
           ip: '127.0.0.1',
@@ -198,6 +198,7 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
         };
     }
   });
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
@@ -386,7 +387,7 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
                 testerId: formData.testerId.trim(),
                 dialogId: formData.dialogId.trim(),
                 sipComparator: formData.sipComparator || {},
-                timeout: formData.timeout || 5000,
+                timeout: formData.timeout || 5,
               }
             ]
           });
@@ -407,7 +408,7 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
                 testerId: formData.testerId.trim(),
                 dialogId: formData.dialogId.trim(),
                 sipComparator: formData.sipComparator || {},
-                timeout: formData.timeout || 5000,
+                timeout: formData.timeout || 5,
               }
             ]
           });
@@ -428,7 +429,7 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
                 testerId: formData.testerId.trim(),
                 dialogId: formData.dialogId.trim(),
                 sipComparator: formData.sipComparator || {},
-                timeout: formData.timeout || 5000,
+                timeout: formData.timeout || 5,
               }
             ]
           });
@@ -449,7 +450,7 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
                 testerId: formData.testerId.trim(),
                 dialogId: formData.dialogId.trim(),
                 sipComparator: formData.sipComparator || {},
-                timeout: formData.timeout || 5000,
+                timeout: formData.timeout || 5,
               }
             ]
           });
@@ -1301,9 +1302,9 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
                 <NumberInput
                   id="timeout"
                   label="Timeout (ms)"
-                  value={formData.timeout || 5000}
+                  value={formData.timeout || 5}
                   onChange={handleInputChange('timeout')}
-                  helperText="Query timeout in milliseconds"
+                  helperText="Query timeout in seconds"
                   required
                 />
 
@@ -1336,11 +1337,9 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
                 <Dropdown
                   id="testerRole"
                   label="Tester Role"
-                  value={formData.testerRole || 'DEFAULT_CLIENT'}
+                  value={formData.testerRole || 'AVAYA_SBC'}
                   onChange={handleInputChange('testerRole')}
                   options={[
-                    { value: 'DEFAULT_CLIENT', label: 'Default Client' },
-                    { value: 'DEFAULT_SERVER', label: 'Default Server' },
                     { value: 'AVAYA_SBC', label: 'Avaya SBC' },
                     { value: 'CISCO_SBC', label: 'Cisco SBC' },
                     { value: 'TEAMS_SBC', label: 'Teams SBC' },
@@ -1348,7 +1347,7 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
                     { value: 'SUPERVISOR', label: 'Supervisor' },
                     { value: 'RTIG', label: 'RTIG' },
                     { value: 'ESFU', label: 'ESFU' },
-                    { value: 'SIP_LB', label: 'SIP Load Balancer' },
+                    { value: 'SIP_LB', label: 'SIP-LB' },
                     { value: 'VRSP', label: 'VRSP' },
                   ]}
                   required

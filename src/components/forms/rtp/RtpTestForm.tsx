@@ -173,29 +173,59 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
       setFormData(prev => ({ ...prev, [field]: numValue }));
     } else if (field === 'streamType') {
       // Handle stereo configuration - add second configuration if stereo
-      if (value === 'STEREO' && formData.testStreamConfigurations && formData.testStreamConfigurations.length === 1) {
-        const firstConfig = formData.testStreamConfigurations[0];
-        setFormData(prev => ({
-          ...prev,
-          [field]: value,
-          testStreamConfigurations: [
-            firstConfig,
-            {
-              ssrc: 12346,
-              streamSize: firstConfig.streamSize,
-              sourcePort: firstConfig.sourcePort + 2,
-              targetIp: firstConfig.targetIp,
-              targetPort: firstConfig.targetPort + 2,
-            }
-          ]
-        }));
-      } else if (value === 'MONO' && formData.testStreamConfigurations && formData.testStreamConfigurations.length > 1) {
-        // Remove second configuration if switching to mono
-        setFormData(prev => ({
-          ...prev,
-          [field]: value,
-          testStreamConfigurations: [formData.testStreamConfigurations![0]]
-        }));
+      if (value === 'STEREO') {
+        // Handle testStreamConfigurations for regular functions
+        if (formData.testStreamConfigurations && formData.testStreamConfigurations.length === 1) {
+          const firstConfig = formData.testStreamConfigurations[0];
+          setFormData(prev => ({
+            ...prev,
+            [field]: value,
+            testStreamConfigurations: [
+              firstConfig,
+              {
+                ssrc: 12346,
+                streamSize: firstConfig.streamSize,
+                sourcePort: firstConfig.sourcePort + 2,
+                targetIp: firstConfig.targetIp,
+                targetPort: firstConfig.targetPort + 2,
+              }
+            ]
+          }));
+        }
+        // Handle testCommunicationConfigurations for update-sender-destination
+        else if (formData.testCommunicationConfigurations && formData.testCommunicationConfigurations.length === 1) {
+          const firstConfig = formData.testCommunicationConfigurations[0];
+          setFormData(prev => ({
+            ...prev,
+            [field]: value,
+            testCommunicationConfigurations: [
+              firstConfig,
+              {
+                ssrc: 12346,
+                sourcePort: firstConfig.sourcePort + 2,
+                targetIp: firstConfig.targetIp,
+                targetPort: firstConfig.targetPort + 2,
+              }
+            ]
+          }));
+        }
+      } else if (value === 'MONO') {
+        // Remove second configuration if switching to mono for testStreamConfigurations
+        if (formData.testStreamConfigurations && formData.testStreamConfigurations.length > 1) {
+          setFormData(prev => ({
+            ...prev,
+            [field]: value,
+            testStreamConfigurations: [formData.testStreamConfigurations![0]]
+          }));
+        }
+        // Remove second configuration if switching to mono for testCommunicationConfigurations
+        else if (formData.testCommunicationConfigurations && formData.testCommunicationConfigurations.length > 1) {
+          setFormData(prev => ({
+            ...prev,
+            [field]: value,
+            testCommunicationConfigurations: [formData.testCommunicationConfigurations![0]]
+          }));
+        }
       } else {
         setFormData(prev => ({ ...prev, [field]: value }));
       }
@@ -483,7 +513,7 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
                 <CardContent>
                   <Typography variant="subtitle1" gutterBottom>
                     {formData.streamType === 'STEREO' ?
-                      `Channel ${index + 1} (${index === 0 ? 'Left' : 'Right'})` :
+                      `Channel ${index + 1} ` :
                       'Stream Configuration'
                     }
                   </Typography>
@@ -639,14 +669,17 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
 
             {/* Communication Configurations */}
             <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-              Communication Configurations
+              Communication Configuration{formData.streamType === 'STEREO' ? 's' : ''}
             </Typography>
 
             {formData.testCommunicationConfigurations?.map((config, index) => (
               <Card key={index} sx={{ mb: 2, p: 2 }}>
                 <CardContent>
                   <Typography variant="subtitle1" gutterBottom>
-                    Configuration {index + 1}
+                    {formData.streamType === 'STEREO' ?
+                      `Channel ${index + 1}` :
+                      `Configuration ${index + 1}`
+                    }
                   </Typography>
 
                   <Stack spacing={2}>
@@ -793,15 +826,24 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
               placeholder="550e8400-e29b-41d4-a716-446655440000"
               helperText="UUID of the RTP tester"
             />
-            <TextInput
-              id="ssrcs"
-              label="SSRCs (comma-separated)"
-              value={formData.ssrcs?.join(', ') || ''}
-              onChange={handleInputChange('ssrcs')}
+            <NumberInput
+              id="ssrc1"
+              label="SSRC1"
+              value={formData.ssrc1 || ''}
+              onChange={handleInputChange('ssrc1')}
               required
-              placeholder="12345, 12346, "
+              placeholder="12345"
               helperText="List of Synchronization Source identifiers"
             />
+            <NumberInput
+              id="ssrc2"
+              label="SSRC2 (Optional)"
+              value={formData.ssrc2 || ''}
+              onChange={handleInputChange('ssrc2')}
+              placeholder="12345"
+              helperText="List of Synchronization Source identifiers"
+            />
+
             <TextInput
               id="interactionKey"
               label="Interaction Key"

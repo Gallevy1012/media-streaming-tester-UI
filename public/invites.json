@@ -1,31 +1,41 @@
-[
-  {
-    "Name": "VRSP INVITE",
-    "Invite": "INVITE sip:10.221.19.252;transport=udp SIP/2.0\nVia: SIP/2.0/UDP dror-mz-acvce01-trust-na1.openrec.dev.internal:5070;branch=z9hG4bKac1164773657;received=10.231.242.27\nMax-Forwards: 69\nFrom: <sip:acmeSrc@172.21.13.164>;tag=1c257669691\nTo: \"VRSP\" <sip:10.221.19.252>\nCall-ID: 13549686172072025122131@dror-mz-acvce01-trust-na1.openrec.dev.internal\nCSeq: 1 INVITE\nContact: <sip:acmeSrc@dror-mz-acvce01-trust-na1.openrec.dev.internal:5070>;+sip.src\nContent-Type: multipart/mixed;boundary=boundary_ac1504\nContent-Length: 2352\n\n--boundary_ac1504\nContent-Type: application/sdp\n\nv=0\no=- 2142479003 635515518 IN IP4 10.231.242.146\ns=-\nc=IN IP4 10.231.242.146\nt=0 0\nm=audio 6304 RTP/AVP 0 8 18 127\na=label:34146659\na=sendonly"
-  },
-  {
-    "Name": "ESFU INVITE",
-    "Invite": "INVITE sip:10.2323231212212221.19.252;transport=udp SIP/2.0\nVia: SIP/2.0/UDP dror-mz-acvce01-trust-na1.openrec.dev.internal:5070;branch=z9hG4bKac1164773657;received=10.231.242.27\nMax-Forwards: 69\nFrom: <sip:acmeSrc@172.21.13.164>;tag=1c257669691\nTo: \"VRSP\" <sip:10.221.19.252>\nCall-ID: 13549686172072025122131@dror-mz-acvce01-trust-na1.openrec.dev.internal\nCSeq: 1 INVITE\nContact: <sip:acmeSrc@dror-mz-acvce01-trust-na1.openrec.dev.internal:5070>;+sip.src\nContent-Type: multipart/mixed;boundary=boundary_ac1504\nContent-Length: 2352\n\n--boundary_ac1504\nContent-Type: application/sdp\n\nv=0\no=- 2142479003 635515518 IN IP4 10.231.242.146\ns=-\nc=IN IP4 10.231.242.146\nt=0 0\nm=audio 6304 RTP/AVP 0 8 18 127\na=label:34146659\na=sendonly"
-  },
-  {
-    "Name": "RECORDER INVITE",
-    "Invite": "INVITE sip:10.221.19.252;transport=udp SIP/2.0\nVia: SIP/2.0/UDP dror-mz-acvce01-trust-na1.openrec.dev.internal:5070;branch=z9hG4bKac1164773657;received=10.231.242.27\nMax-Forwards: 69\nFrom: <sip:acmeSrc@172.21.13.164>;tag=1c257669691\nTo: \"VRSP\" <sip:10.221.19.252>\nCall-ID: 13549686172072025122131@dror-mz-acvce01-trust-na1.openrec.dev.internal\nCSeq: 1 INVITE\nContact: <sip:acmeSrc@dror-mz-acvce01-trust-na1.openrec.dev.internal:5070>;+sip.src\nContent-Type: multipart/mixed;boundary=boundary_ac1504\nContent-Length: 2352\n\n--boundary_ac1504\nContent-Type: application/sdp\n\nv=0\no=- 2142479003 635515518 IN IP4 10.231.242.146\ns=-\nc=IN IP4 10.231.242.146\nt=0 0\nm=audio 6304 RTP/AVP 11 127\na=label:34146659\na=sendonly"
-  },
-  {
-    "Name": "SUPERVISOR INVITE",
-    "Invite": "INVITE sip:10.221.19.252;transport=udp SIP/2.0\nVia: SIP/2.0/UDP dror-mz-acvce01-trust-na1.openrec.dev.internal:5070;branch=z9hG4bKac1164773657;received=10.231.242.27\nMax-Forwards: 69\nFrom: <sip:acmeSrc@172.21.13.164>;tag=1c257669691\nTo: \"VRSP\" <sip:10.221.19.252>\nCall-ID: 13549686172072025122131@dror-mz-acvce01-trust-na1.openrec.dev.internal\nCSeq: 1 INVITE\nContact: <sip:acmeSrc@dror-mz-acvce01-trust-na1.openrec.dev.internal:5070>;+sip.src\nContent-Type: multipart/mixed;boundary=boundary_ac1504\nContent-Length: 2352\n\n--boundary_ac1504\nContent-Type: application/sdp\n\nv=0\no=- 2142479003 635515518 IN IP4 10.231.242.146\ns=-\nc=IN IP4 10.231.242.146\nt=0 0\nm=audio 6304 RTP/AVP 12 127\na=label:34146659\na=sendonly"
-  },
-  {
-    "Name": "CISCO IMR INVITE",
-    "Invite": "INVITE sip:10.221.19.252;transport=udp SIP/2.0\nVia: SIP/2.0/UDP dror-mz-acvce01-trust-na1.openrec.dev.internal:5070;branch=z9hG4bKac1164773657;received=10.231.242.27\nMax-Forwards: 69\nFrom: <sip:acmeSrc@172.21.13.164>;tag=1c257669691\nTo: \"VRSP\" <sip:10.221.19.252>\nCall-ID: 13549686172072025122131@dror-mz-acvce01-trust-na1.openrec.dev.internal\nCSeq: 1 INVITE\nContact: <sip:acmeSrc@dror-mz-acvce01-trust-na1.openrec.dev.internal:5070>;+sip.src\nContent-Type: multipart/mixed;boundary=boundary_ac1504\nContent-Length: 2352\n\n--boundary_ac1504\nContent-Type: application/sdp\n\nv=0\no=- 2142479003 635515518 IN IP4 10.231.242.146\ns=-\nc=IN IP4 10.231.242.146\nt=0 0\nm=audio 6304 RTP/AVP 12 127\na=label:34146659\na=sendonly"
-  },
-  {
-    "Name": "CISCO NEAREND INVITE",
-    "Invite": "INVITE sip:10.221.19.252;transport=udp SIP/2.0\nVia: SIP/2.0/UDP dror-mz-acvce01-trust-na1.openrec.dev.internal:5070;branch=z9hG4bKac1164773657;received=10.231.242.27\nMax-Forwards: 69\nFrom: <sip:acmeSrc@172.21.13.164>;tag=1c257669691\nTo: \"VRSP\" <sip:10.221.19.252>\nCall-ID: 13549686172072025122131@dror-mz-acvce01-trust-na1.openrec.dev.internal\nCSeq: 1 INVITE\nContact: <sip:acmeSrc@dror-mz-acvce01-trust-na1.openrec.dev.internal:5070>;+sip.src\nContent-Type: multipart/mixed;boundary=boundary_ac1504\nContent-Length: 2352\n\n--boundary_ac1504\nContent-Type: application/sdp\n\nv=0\no=- 2142479003 635515518 IN IP4 10.231.242.146\ns=-\nc=IN IP4 10.231.242.146\nt=0 0\nm=audio 6304 RTP/AVP 12 127\na=label:34146659\na=sendonly"
-  },
-  {
-    "Name": "CISCO FAREND INVITE",
-    "Invite": "INVITE sip:10.221.19.252;transport=udp SIP/2.0\nVia: SIP/2.0/UDP dror-mz-acvce01-trust-na1.openrec.dev.internal:5070;branch=z9hG4bKac1164773657;received=10.231.242.27\nMax-Forwards: 69\nFrom: <sip:acmeSrc@172.21.13.164>;tag=1c257669691\nTo: \"VRSP\" <sip:10.221.19.252>\nCall-ID: 13549686172072025122131@dror-mz-acvce01-trust-na1.openrec.dev.internal\nCSeq: 1 INVITE\nContact: <sip:acmeSrc@dror-mz-acvce01-trust-na1.openrec.dev.internal:5070>;+sip.src\nContent-Type: multipart/mixed;boundary=boundary_ac1504\nContent-Length: 2352\n\n--boundary_ac1504\nContent-Type: application/sdp\n\nv=0\no=- 2142479003 635515518 IN IP4 10.231.242.146\ns=-\nc=IN IP4 10.231.242.146\nt=0 0\nm=audio 6304 RTP/AVP 12 127\na=label:34146659\na=sendonly"
-  }
-]
+{
+  "media streaming": [
+    {
+      "Name": "VRSP INVITE2",
+      "Invite": "INVITE sip:10.221.19.252;transport=udp SIP/2.0\nVia: SIP/2.0/UDP dror-mz-acvce01-trust-na1.openrec.dev.internal:5070;branch=z9hG4bKac1164773657;received=10.231.242.27\nMax-Forwards: 69\nFrom: <sip:acmeSrc@172.21.13.164>;tag=1c257669691\nTo: \"VRSP\" <sip:10.221.19.252>\nCall-ID: 13549686172072025122131@dror-mz-acvce01-trust-na1.openrec.dev.internal\nCSeq: 1 INVITE\nContact: <sip:acmeSrc@dror-mz-acvce01-trust-na1.openrec.dev.internal:5070>;+sip.src\nContent-Type: multipart/mixed;boundary=boundary_ac1504\nContent-Length: 2352\n\n--boundary_ac1504\nContent-Type: application/sdp\n\nv=0\no=- 2142479003 635515518 IN IP4 10.231.242.146\ns=-\nc=IN IP4 10.231.242.146\nt=0 0\nm=audio 6304 RTP/AVP 0 8 18 127\na=label:34146659\na=sendonly"
+    },
+    {
+      "Name": "ESFU INVITE",
+      "Invite": "INVITE sip:10.2323231212212221.19.252;transport=udp SIP/2.0\nVia: SIP/2.0/UDP dror-mz-acvce01-trust-na1.openrec.dev.internal:5070;branch=z9hG4bKac1164773657;received=10.231.242.27\nMax-Forwards: 69\nFrom: <sip:acmeSrc@172.21.13.164>;tag=1c257669691\nTo: \"VRSP\" <sip:10.221.19.252>\nCall-ID: 13549686172072025122131@dror-mz-acvce01-trust-na1.openrec.dev.internal\nCSeq: 1 INVITE\nContact: <sip:acmeSrc@dror-mz-acvce01-trust-na1.openrec.dev.internal:5070>;+sip.src\nContent-Type: multipart/mixed;boundary=boundary_ac1504\nContent-Length: 2352\n\n--boundary_ac1504\nContent-Type: application/sdp\n\nv=0\no=- 2142479003 635515518 IN IP4 10.231.242.146\ns=-\nc=IN IP4 10.231.242.146\nt=0 0\nm=audio 6304 RTP/AVP 0 8 18 127\na=label:34146659\na=sendonly"
+    },
+    {
+      "Name": "RECORDER INVITE",
+      "Invite": "INVITE sip:10.221.19.252;transport=udp SIP/2.0\nVia: SIP/2.0/UDP dror-mz-acvce01-trust-na1.openrec.dev.internal:5070;branch=z9hG4bKac1164773657;received=10.231.242.27\nMax-Forwards: 69\nFrom: <sip:acmeSrc@172.21.13.164>;tag=1c257669691\nTo: \"VRSP\" <sip:10.221.19.252>\nCall-ID: 13549686172072025122131@dror-mz-acvce01-trust-na1.openrec.dev.internal\nCSeq: 1 INVITE\nContact: <sip:acmeSrc@dror-mz-acvce01-trust-na1.openrec.dev.internal:5070>;+sip.src\nContent-Type: multipart/mixed;boundary=boundary_ac1504\nContent-Length: 2352\n\n--boundary_ac1504\nContent-Type: application/sdp\n\nv=0\no=- 2142479003 635515518 IN IP4 10.231.242.146\ns=-\nc=IN IP4 10.231.242.146\nt=0 0\nm=audio 6304 RTP/AVP 11 127\na=label:34146659\na=sendonly"
+    }
+  ],
+  "recorder": [
+    {
+      "Name": "RECORDER INVITE",
+      "Invite": "INVITE sip:10.221.19.252;transport=udp SIP/2.0\nVia: SIP/2.0/UDP dror-mz-acvce01-trust-na1.openrec.dev.internal:5070;branch=z9hG4bKac1164773657;received=10.231.242.27\nMax-Forwards: 69\nFrom: <sip:acmeSrc@172.21.13.164>;tag=1c257669691\nTo: \"VRSP\" <sip:10.221.19.252>\nCall-ID: 13549686172072025122131@dror-mz-acvce01-trust-na1.openrec.dev.internal\nCSeq: 1 INVITE\nContact: <sip:acmeSrc@dror-mz-acvce01-trust-na1.openrec.dev.internal:5070>;+sip.src\nContent-Type: multipart/mixed;boundary=boundary_ac1504\nContent-Length: 2352\n\n--boundary_ac1504\nContent-Type: application/sdp\n\nv=0\no=- 2142479003 635515518 IN IP4 10.231.242.146\ns=-\nc=IN IP4 10.231.242.146\nt=0 0\nm=audio 6304 RTP/AVP 11 127\na=label:34146659\na=sendonly"
+    }
+  ],
+  "observer": [
+    {
+      "Name": "SUPERVISOR INVITE",
+      "Invite": "INVITE sip:10.221.19.252;transport=udp SIP/2.0\nVia: SIP/2.0/UDP dror-mz-acvce01-trust-na1.openrec.dev.internal:5070;branch=z9hG4bKac1164773657;received=10.231.242.27\nMax-Forwards: 69\nFrom: <sip:acmeSrc@172.21.13.164>;tag=1c257669691\nTo: \"VRSP\" <sip:10.221.19.252>\nCall-ID: 13549686172072025122131@dror-mz-acvce01-trust-na1.openrec.dev.internal\nCSeq: 1 INVITE\nContact: <sip:acmeSrc@dror-mz-acvce01-trust-na1.openrec.dev.internal:5070>;+sip.src\nContent-Type: multipart/mixed;boundary=boundary_ac1504\nContent-Length: 2352\n\n--boundary_ac1504\nContent-Type: application/sdp\n\nv=0\no=- 2142479003 635515518 IN IP4 10.231.242.146\ns=-\nc=IN IP4 10.231.242.146\nt=0 0\nm=audio 6304 RTP/AVP 12 127\na=label:34146659\na=sendonly"
+    },
+    {
+      "Name": "CISCO IMR INVITE",
+      "Invite": "INVITE sip:10.221.19.252;transport=udp SIP/2.0\nVia: SIP/2.0/UDP dror-mz-acvce01-trust-na1.openrec.dev.internal:5070;branch=z9hG4bKac1164773657;received=10.231.242.27\nMax-Forwards: 69\nFrom: <sip:acmeSrc@172.21.13.164>;tag=1c257669691\nTo: \"VRSP\" <sip:10.221.19.252>\nCall-ID: 13549686172072025122131@dror-mz-acvce01-trust-na1.openrec.dev.internal\nCSeq: 1 INVITE\nContact: <sip:acmeSrc@dror-mz-acvce01-trust-na1.openrec.dev.internal:5070>;+sip.src\nContent-Type: multipart/mixed;boundary=boundary_ac1504\nContent-Length: 2352\n\n--boundary_ac1504\nContent-Type: application/sdp\n\nv=0\no=- 2142479003 635515518 IN IP4 10.231.242.146\ns=-\nc=IN IP4 10.231.242.146\nt=0 0\nm=audio 6304 RTP/AVP 12 127\na=label:34146659\na=sendonly"
+    },
+    {
+      "Name": "CISCO NEAREND INVITE",
+      "Invite": "INVITE sip:10.221.19.252;transport=udp SIP/2.0\nVia: SIP/2.0/UDP dror-mz-acvce01-trust-na1.openrec.dev.internal:5070;branch=z9hG4bKac1164773657;received=10.231.242.27\nMax-Forwards: 69\nFrom: <sip:acmeSrc@172.21.13.164>;tag=1c257669691\nTo: \"VRSP\" <sip:10.221.19.252>\nCall-ID: 13549686172072025122131@dror-mz-acvce01-trust-na1.openrec.dev.internal\nCSeq: 1 INVITE\nContact: <sip:acmeSrc@dror-mz-acvce01-trust-na1.openrec.dev.internal:5070>;+sip.src\nContent-Type: multipart/mixed;boundary=boundary_ac1504\nContent-Length: 2352\n\n--boundary_ac1504\nContent-Type: application/sdp\n\nv=0\no=- 2142479003 635515518 IN IP4 10.231.242.146\ns=-\nc=IN IP4 10.231.242.146\nt=0 0\nm=audio 6304 RTP/AVP 12 127\na=label:34146659\na=sendonly"
+    },
+    {
+      "Name": "CISCO FAREND INVITE",
+      "Invite": "INVITE sip:10.221.19.252;transport=udp SIP/2.0\nVia: SIP/2.0/UDP dror-mz-acvce01-trust-na1.openrec.dev.internal:5070;branch=z9hG4bKac1164773657;received=10.231.242.27\nMax-Forwards: 69\nFrom: <sip:acmeSrc@172.21.13.164>;tag=1c257669691\nTo: \"VRSP\" <sip:10.221.19.252>\nCall-ID: 13549686172072025122131@dror-mz-acvce01-trust-na1.openrec.dev.internal\nCSeq: 1 INVITE\nContact: <sip:acmeSrc@dror-mz-acvce01-trust-na1.openrec.dev.internal:5070>;+sip.src\nContent-Type: multipart/mixed;boundary=boundary_ac1504\nContent-Length: 2352\n\n--boundary_ac1504\nContent-Type: application/sdp\n\nv=0\no=- 2142479003 635515518 IN IP4 10.231.242.146\ns=-\nc=IN IP4 10.231.242.146\nt=0 0\nm=audio 6304 RTP/AVP 12 127\na=label:34146659\na=sendonly"
+    }
+  ]
+}
 

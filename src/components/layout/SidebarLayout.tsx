@@ -385,6 +385,20 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                   sipAddress: {tester.details.listeningAddress.sipAddress}
                 </Typography>
               )}
+
+              {/* Dialog IDs section for Media Tester */}
+              {tester.dialogIds && tester.dialogIds.length > 0 && (
+                <>
+                  <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1, fontWeight: 'bold' }}>
+                    Dialog IDs ({tester.dialogIds.length}):
+                  </Typography>
+                  {tester.dialogIds.map((dialogId: string, index: number) => (
+                    <Typography key={index} variant="body2" display="block" color="text.primary" sx={{ ml: 1, fontSize: '0.85rem', fontFamily: 'monospace' }}>
+                      {index + 1}. {dialogId}
+                    </Typography>
+                  ))}
+                </>
+              )}
             </>
           )}
 

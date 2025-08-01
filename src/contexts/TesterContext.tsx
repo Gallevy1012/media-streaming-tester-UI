@@ -115,34 +115,70 @@ function testerReducer(state: TesterState, action: TesterAction): TesterState {
             detailsTesterId: tester.details?.testerId
           });
           
-          // Primary match: by sipTesterId
-          if (tester.type === 'sip-tester' && tester.sipTesterId === sipTesterId) {
-            console.log('MATCH by sipTesterId! Adding dialog ID:', dialogId);
-            return {
-              ...tester,
-              dialogIds: [...(tester.dialogIds || []), dialogId]
-            };
+          // Handle SIP testers
+          if (tester.type === 'sip-tester') {
+            // Primary match: by sipTesterId
+            if (tester.sipTesterId === sipTesterId) {
+              console.log('MATCH by sipTesterId! Adding dialog ID:', dialogId);
+              return {
+                ...tester,
+                dialogIds: [...(tester.dialogIds || []), dialogId]
+              };
+            }
+            
+            // Fallback match: if sipTesterId is undefined, try to match by the sipTesterId in the details
+            if (!tester.sipTesterId && 
+                tester.details && 
+                (tester.details.sipTesterId === sipTesterId || tester.details.testerId === sipTesterId)) {
+              console.log('FALLBACK MATCH by details! Adding dialog ID:', dialogId, 'and fixing sipTesterId');
+              return {
+                ...tester,
+                sipTesterId: sipTesterId, // Fix the missing sipTesterId
+                dialogIds: [...(tester.dialogIds || []), dialogId]
+              };
+            }
           }
           
-          // Fallback match: if sipTesterId is undefined, try to match by the sipTesterId in the details
-          if (tester.type === 'sip-tester' && 
-              !tester.sipTesterId && 
-              tester.details && 
-              (tester.details.sipTesterId === sipTesterId || tester.details.testerId === sipTesterId)) {
-            console.log('FALLBACK MATCH by details! Adding dialog ID:', dialogId, 'and fixing sipTesterId');
-            return {
-              ...tester,
-              sipTesterId: sipTesterId, // Fix the missing sipTesterId
-              dialogIds: [...(tester.dialogIds || []), dialogId]
-            };
+          // Handle Media testers
+          if (tester.type === 'media-tester') {
+            console.log('🎯 TesterContext - Checking media tester for dialog ID match:', { 
+              testerId: tester.id, 
+              sipTesterId: tester.sipTesterId,
+              mediaTesterId: tester.mediaTesterId,
+              searchingSipTesterId: sipTesterId 
+            });
+            
+            // Primary match: by sipTesterId (which is actually mediaTesterId for media testers)
+            if (tester.sipTesterId === sipTesterId) {
+              console.log('🎯 MEDIA TESTER MATCH by sipTesterId! Adding dialog ID:', dialogId);
+              return {
+                ...tester,
+                dialogIds: [...(tester.dialogIds || []), dialogId]
+              };
+            }
+            
+            // Fallback match: if sipTesterId is undefined, try to match by the testerId in the details
+            if (!tester.sipTesterId && 
+                tester.details && 
+                (tester.details.mediaTesterId === sipTesterId || tester.details.testerId === sipTesterId)) {
+              console.log('🎯 MEDIA TESTER FALLBACK MATCH by details! Adding dialog ID:', dialogId, 'and fixing sipTesterId');
+              return {
+                ...tester,
+                sipTesterId: sipTesterId, // Fix the missing sipTesterId (store mediaTesterId in sipTesterId field)
+                dialogIds: [...(tester.dialogIds || []), dialogId]
+              };
+            }
+            
+            console.log('🎯 NO MATCH for media tester');
           }
           
           return tester;
         }),
       };
       
-      console.log('Result: Updated testers:', newState.testers.filter(t => t.type === 'sip-tester').map(t => ({ 
+      console.log('Result: Updated testers:', newState.testers.filter(t => t.type === 'sip-tester' || t.type === 'media-tester').map(t => ({ 
         id: t.id, 
+        type: t.type,
         sipTesterId: t.sipTesterId, 
         dialogIds: t.dialogIds 
       })));

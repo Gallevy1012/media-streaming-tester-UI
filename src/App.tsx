@@ -10,7 +10,7 @@ import { Layout, SidebarLayout } from './components/layout';
 import { TesterSelection, TesterFunctionSelection } from './components/testerSelection';
 import { SipTestForm, CreateSipTesterForm, RemoveSipTesterForm, SendSipInviteForm, SendSipByeForm } from './components/forms/sip';
 import { RtpTestForm } from './components/forms/rtp';
-import { MediaTestForm } from './components/forms/media';
+import { MediaTestForm, SendMediaInviteForm } from './components/forms/media';
 import { PersistentAuthBox } from './components/auth';
 import type { TesterType } from './types';
 import './App.css';
@@ -745,7 +745,12 @@ function TesterFormPage() {
       case 'rtp-tester':
         return <RtpTestForm functionId={functionId} onTestComplete={handleTestComplete} onBack={handleBack} />;
       case 'media-tester':
-        return <MediaTestForm functionId={functionId} onTestComplete={handleTestComplete} onBack={handleBack} />;
+        switch (functionId) {
+          case 'send-invite':
+            return <SendMediaInviteForm onTestComplete={handleTestComplete} onBack={handleBack} />;
+          default:
+            return <MediaTestForm functionId={functionId} onTestComplete={handleTestComplete} onBack={handleBack} />;
+        }
       default:
         return (
           <Box sx={{ p: 3 }}>

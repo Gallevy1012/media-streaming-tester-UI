@@ -12,7 +12,7 @@ import type {
 // Import the tester context to add/remove testers from the list
 let addTesterFunction: ((type: 'media-tester', details: any, additionalData?: any) => void) | null = null;
 let removeTesterFunction: ((type: 'media-tester', testerId: string) => void) | null = null;
-let addDialogIdFunction: ((type: 'media-tester', testerId: string, dialogId: string) => void) | null = null;
+let addDialogIdFunction: ((testerId: string, dialogId: string) => void) | null = null;
 
 // Function to set the addTester function from the context
 export const setMediaTesterAddFunction = (addFn: (type: 'media-tester', details: any, additionalData?: any) => void) => {
@@ -25,7 +25,7 @@ export const setMediaTesterRemoveFunction = (removeFn: (type: 'media-tester', te
 };
 
 // Function to set the addDialogId function from the context
-export const setMediaTesterAddDialogIdFunction = (addDialogIdFn: (type: 'media-tester', testerId: string, dialogId: string) => void) => {
+export const setMediaTesterAddDialogIdFunction = (addDialogIdFn: (testerId: string, dialogId: string) => void) => {
   addDialogIdFunction = addDialogIdFn;
 };
 
@@ -40,6 +40,7 @@ class MediaTesterService {
         addTesterFunction('media-tester', response, {
           requestId: request.requestId || 'default-request',
           mediaTesterId: mediaTesterId,
+          sipTesterId: mediaTesterId, // Set sipTesterId to mediaTesterId for dialog ID matching
           operation: 'createMediaTester'
         });
       }
@@ -67,14 +68,15 @@ class MediaTesterService {
 
   async sendInvite(request: SendMediaInviteRequest): Promise<any> {
     try {
+      console.log('🎯 Media Tester Service - Sending invite with testerId:', request.testerId);
       const response = await testerHttpClient.post('/media-tester/send-invite', request);
 
-      // Add dialog ID to tester if response contains it
-      if (response && addDialogIdFunction && request.testerId) {
-        const dialogId = (response as any).dialogId;
-        if (dialogId) {
-          addDialogIdFunction('media-tester', request.testerId, dialogId);
-        }
+      // Extract dialogId from response and add it to the tester's dialog list
+      if (response && (response as any).dialogId && addDialogIdFunction) {
+        console.log('🎯 Media Tester Service - Adding dialog ID:', (response as any).dialogId, 'to testerId:', request.testerId);
+        addDialogIdFunction(request.testerId, (response as any).dialogId);
+      } else {
+        console.log('🎯 Media Tester Service - No dialog ID found in response or addDialogIdFunction not available');
       }
 
       return response;

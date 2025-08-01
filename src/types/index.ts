@@ -43,8 +43,6 @@ export interface AuthResponse {
 export type TesterType = 'sip-tester' | 'rtp-tester' | 'media-tester';
 
 export type TesterRole =
-  | 'DEFAULT_CLIENT'
-  | 'DEFAULT_SERVER'
   | 'AVAYA_SBC'
   | 'CISCO_SBC'
   | 'TEAMS_SBC'

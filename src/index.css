@@ -1,3 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Add Inter font */
 :root {
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.6;
@@ -16,9 +19,6 @@
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
 }
-
-/* Add Inter font */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 a {
   font-weight: 500;
