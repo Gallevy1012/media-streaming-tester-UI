@@ -75,6 +75,7 @@ interface MediaFormData {
   autoStartRtp?: boolean;
   rtpDurationMs?: number;
   customHeaders?: Record<string, string>;
+  sendInviteWithSdp?: boolean;
 
   // SDP configuration (from SIP tester)
   sdp?: {
@@ -145,6 +146,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
       case 'send-invite':
         return {
           mediaTesterId: '',
+          sendInviteWithSdp: true,
           destinationAddress: {
             ip: '',
             port: 5060,
@@ -207,7 +209,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
         return {
           testerId: '',
           dialogId: '',
-          timeout: 5000,
+          timeout: 5,
           sipComparator: {},
         };
 
@@ -232,7 +234,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
           ip: '127.0.0.1',
           port: 5060,
           transportProtocol: 'UDP' as TransportProtocol,
-          alias: 'media-alias',
+          alias: `media-alias-${new Date().toISOString().replace(/[:.-]/g, '').slice(0, 15)}`,
           mediaSourceType: 'SIP' as MediaSourceType,
           unsupportedCodecs: [] as MediaCodec[],
           saveDialog: true,
@@ -659,7 +661,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
             throw new Error('Destination IP is required');
           }
 
-          return await mediaTesterService.sendInvite({
+          const requestData: any = {
             testerId: formData.mediaTesterId.trim(),
             destinationAddress: {
               ip: formData.destinationAddress.ip.trim(),
@@ -668,17 +670,22 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
               alias: formData.destinationAddress.alias?.trim(),
             },
             customHeaders: formData.customHeaders || {},
-            sdp: {
-              ...formData.sdp!,
-              channels: formData.sdp!.channels.map(channel => ({
+          };
+
+          if (formData.sendInviteWithSdp && formData.sdp) {
+            requestData.sdp = {
+              ...formData.sdp,
+              channels: formData.sdp.channels.map(channel => ({
                 mediaType: channel.mediaType,
                 port: channel.port,
                 transportProtocol: channel.transportProtocol || 'RTP_AVP',
                 connectionAddress: channel.connectionAddress,
                 attributes: channel.attributes,
               }))
-            },
-          });
+            };
+          }
+
+          return await mediaTesterService.sendInvite(requestData);
 
         } else if (functionId === 'send-bye') {
           if (!formData.mediaTesterId?.trim()) {
@@ -719,7 +726,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
               testerId: formData.testerId.trim(),
               dialogId: formData.dialogId.trim(),
               sipComparator: formData.sipComparator || {},
-              timeout: formData.timeout || 5000,
+              timeout: formData.timeout || 5,
             }]
           });
 
@@ -736,7 +743,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
               testerId: formData.testerId.trim(),
               dialogId: formData.dialogId.trim(),
               sipComparator: formData.sipComparator || {},
-              timeout: formData.timeout || 5000,
+              timeout: formData.timeout || 5,
             }]
           });
 
@@ -753,7 +760,7 @@ export const MediaTestForm: React.FC<MediaTestFormProps> = ({ functionId = 'crea
               testerId: formData.testerId.trim(),
               dialogId: formData.dialogId.trim(),
               sipComparator: formData.sipComparator || {},
-              timeout: formData.timeout || 5000,
+              timeout: formData.timeout || 5,
             }]
           });
 
@@ -1920,7 +1927,7 @@ a=sendonly`}
 
                 <NumberInput
                   id="timeout"
-                  label="Timeout (ms)"
+                  label="Timeout (seconds)"
                   value={formData.timeout || 5}
                   onChange={handleInputChange('timeout')}
                   helperText="Query timeout in seconds"
@@ -1935,6 +1942,11 @@ a=sendonly`}
                   <SipComparatorEditor
                     value={formData.sipComparator || {}}
                     onChange={handleSipComparatorChange}
+                    queryType={
+                      functionId === 'got-incoming-responses' || functionId === 'sent-outgoing-responses'
+                        ? 'response'
+                        : 'request'
+                    }
                   />
                 </Box>
               </>

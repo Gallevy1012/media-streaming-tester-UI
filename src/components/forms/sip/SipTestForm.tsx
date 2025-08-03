@@ -67,6 +67,7 @@ interface SipFormData {
     alias?: string;
   };
   customHeaders?: Record<string, string>;
+  sendInviteWithSdp?: boolean;
   sdp?: {
     sessionVersion: number;
     origin: {
@@ -114,6 +115,7 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
         return {
           requestId: '',
           testerId: '',
+          sendInviteWithSdp: true,
           destinationAddress: {
             ip: '',
             port: 62000,
@@ -187,7 +189,7 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
           ip: '127.0.0.1',
           port: 5060,
           transportProtocol: 'UDP' as TransportProtocol,
-          alias: 'default-alias',
+          alias: `default-alias-${new Date().toISOString().replace(/[:.-]/g, '').slice(0, 15)}`,
 
           // Additional SipTesterConfig fields
           mediaSourceType: 'SIP' as MediaSourceType,
@@ -344,7 +346,7 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
             throw new Error('Destination IP is required');
           }
 
-          const response = await sipTesterService.sendInvite({
+          const requestData: any = {
             testerId: formData.testerId.trim(),
             destinationAddress: {
               ip: formData.destinationAddress.ip.trim(),
@@ -353,8 +355,13 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
               alias: formData.destinationAddress.alias?.trim(),
             },
             customHeaders: formData.customHeaders || {},
-            sdp: formData.sdp!,
-          });
+          };
+
+          if (formData.sendInviteWithSdp && formData.sdp) {
+            requestData.sdp = formData.sdp;
+          }
+
+          const response = await sipTesterService.sendInvite(requestData);
 
           return response;
         } else if (functionId === 'get-dialog-details') {
@@ -687,9 +694,28 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
                   helperText="Optional alias for the destination"
                 />
 
-                <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-                  SDP Configuration
-                </Typography>
+                <Box sx={{ mt: 2, mb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Typography variant="h6">
+                    SDP Configuration
+                  </Typography>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.sendInviteWithSdp ?? true}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          sendInviteWithSdp: e.target.checked
+                        }))}
+                        color="primary"
+                      />
+                    }
+                    label="Send invite with SDP"
+                    labelPlacement="start"
+                  />
+                </Box>
+
+                {formData.sendInviteWithSdp && (
+                  <>
 
                 {/* Basic SDP Fields */}
                 <NumberInput
@@ -1249,6 +1275,8 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
                     </Box>
                   </AccordionDetails>
                 </Accordion>
+                  </>
+                )}
               </>
             )}
 
@@ -1301,7 +1329,7 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
 
                 <NumberInput
                   id="timeout"
-                  label="Timeout (ms)"
+                  label="Timeout (seconds)"
                   value={formData.timeout || 5}
                   onChange={handleInputChange('timeout')}
                   helperText="Query timeout in seconds"
@@ -1316,6 +1344,11 @@ export const SipTestForm: React.FC<SipTestFormProps> = ({ functionId = 'create-t
                   <SipComparatorEditor
                     value={formData.sipComparator || {}}
                     onChange={handleSipComparatorChange}
+                    queryType={
+                      functionId === 'got-incoming-responses' || functionId === 'sent-outgoing-responses' 
+                        ? 'response' 
+                        : 'request'
+                    }
                   />
                 </Box>
               </>

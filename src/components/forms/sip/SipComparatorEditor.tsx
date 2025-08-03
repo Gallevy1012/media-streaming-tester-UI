@@ -18,9 +18,10 @@ import type { SipComparator, SdpDto, Origin, Connection, Channel } from '../../.
 interface SipComparatorEditorProps {
   value: SipComparator;
   onChange: (value: SipComparator) => void;
+  queryType?: 'request' | 'response'; // New prop to differentiate between request and response queries
 }
 
-export const SipComparatorEditor: React.FC<SipComparatorEditorProps> = ({ value, onChange }) => {
+export const SipComparatorEditor: React.FC<SipComparatorEditorProps> = ({ value, onChange, queryType = 'request' }) => {
   const handleFieldToggle = (field: keyof SipComparator, enabled: boolean) => {
     const newValue = { ...value };
     if (enabled) {
@@ -50,10 +51,33 @@ export const SipComparatorEditor: React.FC<SipComparatorEditorProps> = ({ value,
       updatedComparator[field] = parseInt(newValue) as any;
     } else if (field.includes('NoToTag') || field.includes('NoFromTag') || field.includes('IsImrHeader')) {
       updatedComparator[field] = (newValue === 'true') as any;
+    } else if (field === 'expected_SdpDto' || field === 'expected_Origin' || field === 'expected_Connection') {
+      // For complex objects, parse the JSON string back to object
+      try {
+        updatedComparator[field] = JSON.parse(newValue) as any;
+      } catch (error) {
+        // If parsing fails, keep as string (fallback)
+        updatedComparator[field] = newValue as any;
+      }
+    } else if (field === 'expected_SdpChannels' || field === 'expected_ChannelsConnection') {
+      // For arrays, parse the JSON string back to array
+      try {
+        updatedComparator[field] = JSON.parse(newValue) as any;
+      } catch (error) {
+        // If parsing fails, keep as string (fallback)
+        updatedComparator[field] = newValue as any;
+      }
     } else {
       updatedComparator[field] = newValue as any;
     }
 
+    onChange(updatedComparator);
+  };
+
+  // Direct update function for complex objects (bypasses string conversion)
+  const handleComplexFieldUpdate = (field: keyof SipComparator, newValue: any) => {
+    const updatedComparator = { ...value };
+    updatedComparator[field] = newValue as any;
     onChange(updatedComparator);
   };
 
@@ -127,9 +151,30 @@ export const SipComparatorEditor: React.FC<SipComparatorEditorProps> = ({ value,
     { value: 'INACTIVE', label: 'INACTIVE' },
   ];
 
-  // Define which fields should use dropdowns
+  const sipStatusCodeOptions = [
+    { value: '100', label: '100 - Trying' },
+    { value: '200', label: '200 - OK' },
+    { value: '302', label: '302 - Moved Temporarily' },
+    { value: '400', label: '400 - Bad Request' },
+    { value: '405', label: '405 - Method Not Allowed' },
+    { value: '406', label: '406 - Not Acceptable' },
+    { value: '408', label: '408 - Request Timeout' },
+    { value: '480', label: '480 - Temporarily Unavailable' },
+    { value: '481', label: '481 - Call/Transaction Does Not Exist' },
+    { value: '486', label: '486 - Busy Here' },
+    { value: '488', label: '488 - Not Acceptable Here' },
+    { value: '500', label: '500 - Internal Server Error' },
+    { value: '503', label: '503 - Service Unavailable' },
+    { value: '504', label: '504 - Server Time-out' },
+  ];
+
+  // Define which fields should use dropdowns based on query type
   const enumFields = {
-    expected_SipMethod: { options: sipMethodOptions, type: 'sipMethod' },
+    expected_SipMethod: { 
+      options: queryType === 'response' ? sipStatusCodeOptions : sipMethodOptions, 
+      type: queryType === 'response' ? 'sipStatusCode' : 'sipMethod' 
+    },
+    expected_SipStatusCode: { options: sipStatusCodeOptions, type: 'sipStatusCode' },
     expected_MediaSourceType: { options: mediaSourceTypeOptions, type: 'mediaSourceType' },
     expected_ChannelsStatus: { options: channelStateOptions, type: 'channelState' },
   };
@@ -241,7 +286,7 @@ export const SipComparatorEditor: React.FC<SipComparatorEditorProps> = ({ value,
       }
 
       current[keys[keys.length - 1]] = newValue;
-      handleFieldValueChange(field, JSON.stringify(updatedSdp));
+      handleComplexFieldUpdate(field, updatedSdp);
     };
 
     return (
@@ -381,7 +426,7 @@ export const SipComparatorEditor: React.FC<SipComparatorEditorProps> = ({ value,
 
     const updateOriginField = (fieldName: keyof Origin, newValue: any) => {
       const updatedOrigin = { ...originValue, [fieldName]: newValue };
-      handleFieldValueChange(field, JSON.stringify(updatedOrigin));
+      handleComplexFieldUpdate(field, updatedOrigin);
     };
 
     return (
@@ -444,7 +489,7 @@ export const SipComparatorEditor: React.FC<SipComparatorEditorProps> = ({ value,
 
     const updateConnectionField = (fieldName: keyof Connection, newValue: any) => {
       const updatedConnection = { ...connectionValue, [fieldName]: newValue };
-      handleFieldValueChange(field, JSON.stringify(updatedConnection));
+      handleComplexFieldUpdate(field, updatedConnection);
     };
 
     return (
@@ -502,7 +547,7 @@ export const SipComparatorEditor: React.FC<SipComparatorEditorProps> = ({ value,
     }
 
     const updateChannels = (newChannels: Channel[]) => {
-      handleFieldValueChange(field, JSON.stringify(newChannels));
+      handleComplexFieldUpdate(field, newChannels);
     };
 
     const addChannel = () => {

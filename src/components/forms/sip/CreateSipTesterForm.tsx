@@ -52,7 +52,7 @@ export const CreateSipTesterForm: React.FC<CreateSipTesterFormProps> = ({ onTest
     ip: '127.0.0.1',
     port: 5060,
     transportProtocol: 'UDP' as TransportProtocol,
-    alias: 'default-alias',
+    alias: `default-alias-${new Date().toISOString().replace(/[:.-]/g, '').slice(0, 15)}`,
     mediaSourceType: 'SIP' as MediaSourceType,
     unsupportedCodecs: [] as MediaCodec[],
     saveDialog: true,

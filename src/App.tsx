@@ -350,7 +350,7 @@ function MainPage() {
         <Box sx={{ 
           textAlign: 'center', 
           pt: { xs: 4, sm: 6 }, 
-          pb: { xs: 3, sm: 4 },
+          pb: { xs: 30, sm: 4 },
           background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.03) 0%, rgba(66, 165, 245, 0.06) 50%, rgba(25, 118, 210, 0.03) 100%)',
           borderRadius: 4,
           mb: { xs: 3, sm: 4 },
@@ -376,10 +376,10 @@ function MainPage() {
           }} />
           <Box sx={{
             position: 'absolute',
-            bottom: -80,
+            bottom: -800,
             right: -80,
             width: 160,
-            height: 160,
+            height: 1660,
             background: 'radial-gradient(circle, rgba(66, 165, 245, 0.05) 0%, transparent 70%)',
             borderRadius: '50%',
             animation: 'float 8s ease-in-out infinite reverse',
@@ -396,7 +396,7 @@ function MainPage() {
               mb: 2,
               letterSpacing: '-0.02em',
               position: 'relative',
-              zIndex: 1,
+              zIndex: 100,
             }}
           >
             🚀 MS-Tester

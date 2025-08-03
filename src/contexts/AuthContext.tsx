@@ -27,7 +27,6 @@ const loadStateFromStorage = (): AuthState => {
     expirationTime: null,
     user: null,
     loginResponse: null,
-    error: null,
   };
 
   try {
@@ -52,7 +51,6 @@ const loadStateFromStorage = (): AuthState => {
           },
           username: savedUsername,
           loginResponse: savedLoginResponse ? JSON.parse(savedLoginResponse) : null,
-          error: null,
         };
       } else {
         // Token expired, clear storage
@@ -123,7 +121,6 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
             username: action.payload.username,
             environment: action.payload.environment,
           },
-          error: null,
         };
       } catch (error) {
         console.error('Error in LOGIN_SUCCESS:', error);
@@ -141,7 +138,6 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
         expirationTime: null,
         username: undefined,
         user: null,
-        error: null,
       };
     case 'LOGOUT':
       // Clear all auth data from localStorage

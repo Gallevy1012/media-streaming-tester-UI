@@ -123,7 +123,20 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
         startTime: 0,
         stopTime: 0,
       },
-      channels: [], // Start with no default channels to avoid conflicts during parsing
+      channels: [
+        {
+          mediaType: 'AUDIO',
+          port: 42000,
+          transportProtocol: 'RTP_AVP',
+          codecs: [0, 8, 18],
+          connectionAddress: '',
+          label: '',
+          packetTime: 20,
+          maxPacketTime: 20,
+          channelState: 'SEND',
+          attributes: {},
+        }
+      ],
     },
   });
 
@@ -137,10 +150,9 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
   // State for toggling save invite input
   const [showSaveInput, setShowSaveInput] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  
+
   // State for grouped invites
   const [groupedInvites, setGroupedInvites] = useState<Record<string, { Name: string; Invite: string }[]>>({});
-  const [selectedGroup, setSelectedGroup] = useState<string>('');
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saveToGroup, setSaveToGroup] = useState<string>('');
   const [showResetDialog, setShowResetDialog] = useState(false);
@@ -181,13 +193,13 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
 
       // Merge file invites and user invites
       const merged: Record<string, { Name: string; Invite: string }[]> = { ...fileInvites };
-      
+
       // Add user invites to existing groups or create new groups
       Object.keys(userGroupedInvites).forEach(groupName => {
         if (merged[groupName]) {
           // Group exists, add user invites that don't already exist
           const existingNames = new Set(merged[groupName].map((invite) => invite.Name));
-          const uniqueUserInvites = userGroupedInvites[groupName].filter((invite) => 
+          const uniqueUserInvites = userGroupedInvites[groupName].filter((invite) =>
             !existingNames.has(invite.Name)
           );
           merged[groupName] = [...merged[groupName], ...uniqueUserInvites];
@@ -198,14 +210,14 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
       });
 
       setGroupedInvites(merged);
-      
+
       // Flatten for backward compatibility with existing savedMessages state
       const flattened: { Name: string; Invite: string }[] = [];
       Object.values(merged).forEach((groupInvites) => {
         flattened.push(...groupInvites);
       });
       setSavedMessages(flattened);
-      
+
     } catch (e) {
       setGroupedInvites({});
       setSavedMessages([]);
@@ -226,7 +238,7 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
             if (merged[groupName]) {
               // Merge with existing groups, avoiding duplicates
               const existingNames = new Set(merged[groupName].map(invite => invite.Name));
-              const uniqueUserInvites = parsedGroups[groupName].filter((invite: any) => 
+              const uniqueUserInvites = parsedGroups[groupName].filter((invite: any) =>
                 !existingNames.has(invite.Name)
               );
               merged[groupName] = [...merged[groupName], ...uniqueUserInvites];
@@ -253,30 +265,30 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
   useEffect(() => {
     // Only save if we have valid grouped invites
     if (Object.keys(groupedInvites).length === 0) return;
-    
+
     // Extract only user-created groups/invites (not file-based ones)
     const userGroups: Record<string, { Name: string; Invite: string }[]> = {};
-    
+
     Object.keys(groupedInvites).forEach(groupName => {
       const userInvitesInGroup = groupedInvites[groupName].filter(invite => {
         // A message is user-created if it's not in the original file-based invites
         // More robust check - avoid default file-based invite names
-        const isFileBasedInvite = invite.Name.includes('VRSP') || 
-                                 invite.Name.includes('ESFU') || 
-                                 invite.Name.includes('RECORDER') || 
-                                 invite.Name.includes('SUPERVISOR') || 
+        const isFileBasedInvite = invite.Name.includes('VRSP') ||
+                                 invite.Name.includes('ESFU') ||
+                                 invite.Name.includes('RECORDER') ||
+                                 invite.Name.includes('SUPERVISOR') ||
                                  invite.Name.includes('CISCO') ||
                                  invite.Name.includes('IMR') ||
                                  invite.Name.includes('NEAREND') ||
                                  invite.Name.includes('FAREND');
         return !isFileBasedInvite;
       });
-      
+
       if (userInvitesInGroup.length > 0) {
         userGroups[groupName] = userInvitesInGroup;
       }
     });
-    
+
     // Save to localStorage with error handling
     try {
       localStorage.setItem('mediaSavedMessages', JSON.stringify(userGroups));
@@ -435,6 +447,33 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
           // Parse To header: To: "VRSP" <sip:10.221.19.252>
           // Store the complete To header for proper reconstruction
           parsed.customHeaders!['To'] = trimmedLine.substring(3).trim();
+
+          console.log('🔍 Parsing To header:', trimmedLine);
+
+          // Extract display name for the destination address alias
+          // Try different patterns: "VRSP" or VRSP (with or without quotes)
+          let displayName = null;
+
+          // Pattern 1: "Display Name" <sip:...>
+          const quotedMatch = trimmedLine.match(/To:\s*"([^"]+)"\s*<sip:/i);
+          if (quotedMatch && quotedMatch[1]) {
+            displayName = quotedMatch[1].trim();
+            console.log('🔍 Found quoted display name:', displayName);
+          } else {
+            // Pattern 2: Display Name <sip:...> (without quotes)
+            const unquotedMatch = trimmedLine.match(/To:\s*([^<]+?)\s*<sip:/i);
+            if (unquotedMatch && unquotedMatch[1] && unquotedMatch[1].trim() !== '') {
+              displayName = unquotedMatch[1].trim();
+              console.log('🔍 Found unquoted display name:', displayName);
+            }
+          }
+
+          if (displayName) {
+            parsed.destinationAddress!.alias = displayName;
+            console.log('🔍 Set destination alias to:', displayName);
+          } else {
+            console.log('🔍 No display name found in To header');
+          }
         } else if (trimmedLine.startsWith('From:')) {
           // Parse From header: From: <sip:acmeSrc@172.21.13.164>;tag=1c257669691
           // Store the complete From header for proper reconstruction
@@ -661,6 +700,7 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
 
     const parsed = parseMediaInvite(rawInviteText);
     if (parsed) {
+
       // Completely replace the form data with parsed data, keeping only the mediaTesterId
       setFormData(prev => ({
         mediaTesterId: prev.mediaTesterId, // Keep the existing tester ID
@@ -672,6 +712,7 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
           channels: parsed.sdp.channels || []
         } : prev.sdp,
       }));
+
 
       // Debug log to help identify channel duplication
       console.log('Parsed SDP:', parsed.sdp);
@@ -699,7 +740,7 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
           throw new Error('Destination IP is required');
         }
 
-        const requestPayload = {
+        const requestPayload: any = {
           testerId: formData.mediaTesterId.trim(),
           destinationAddress: {
             ip: formData.destinationAddress.ip.trim(),
@@ -741,7 +782,7 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
         console.log('=== SENDING MEDIA INVITE REQUEST ===');
         console.log('Request payload:', JSON.stringify(requestPayload, null, 2));
         console.log('Channels being sent:', requestPayload.sdp.channels);
-        requestPayload.sdp.channels.forEach((channel, index) => {
+        requestPayload.sdp.channels.forEach((channel:any, index:any) => {
           console.log(`Channel ${index + 1}:`, {
             mediaType: channel.mediaType,
             port: channel.port,
@@ -784,7 +825,7 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
     const localGroups = JSON.parse(localStorage.getItem('mediaSavedMessages') || '{}');
     let isUserMessage = false;
     let foundInGroup = '';
-    
+
     // Find which group contains this message
     Object.keys(localGroups).forEach(groupName => {
       if (localGroups[groupName].some((msg: any) => msg.Name === name)) {
@@ -792,18 +833,18 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
         foundInGroup = groupName;
       }
     });
-    
+
     if (isUserMessage) {
       // Remove from localStorage grouped structure
       localGroups[foundInGroup] = localGroups[foundInGroup].filter((msg: any) => msg.Name !== name);
-      
+
       // Remove empty groups
       if (localGroups[foundInGroup].length === 0) {
         delete localGroups[foundInGroup];
       }
-      
+
       localStorage.setItem('mediaSavedMessages', JSON.stringify(localGroups));
-      
+
       // Update grouped invites state
       setGroupedInvites(prev => {
         const updated = { ...prev };
@@ -816,7 +857,7 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
         return updated;
       });
     }
-    
+
     // Remove from current display
     setSavedMessages(prev => prev.filter(msg => msg.Name !== name));
   };
@@ -829,7 +870,7 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
       alert('A saved message with this name already exists. Please choose a different name.');
       return;
     }
-    
+
     // Show dialog to select group
     setShowSaveDialog(true);
   };
@@ -840,11 +881,11 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
       alert('Please select or enter a group name.');
       return;
     }
-    
+
     const name = inviteName.trim();
     const invite = generateMediaInvitePreview();
     const groupName = saveToGroup.trim();
-    
+
     // Update grouped invites
     setGroupedInvites(prev => {
       const updated = { ...prev };
@@ -854,10 +895,10 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
       updated[groupName] = [...updated[groupName], { Name: name, Invite: invite }];
       return updated;
     });
-    
+
     // Update flat savedMessages for backward compatibility
     setSavedMessages(prev => [...prev, { Name: name, Invite: invite }]);
-    
+
     // Reset form
     setInviteName("");
     setShowSaveInput(false);
@@ -904,10 +945,23 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
           startTime: 0,
           stopTime: 0,
         },
-        channels: [],
+        channels: [
+          {
+            mediaType: 'AUDIO',
+            port: 42000,
+            transportProtocol: 'RTP_AVP',
+            codecs: [0, 8, 18],
+            connectionAddress: '',
+            label: '',
+            packetTime: 20,
+            maxPacketTime: 20,
+            channelState: 'SEND',
+            attributes: {},
+          }
+        ],
       },
     });
-    
+
     // Reset other states
     setWithCLine(true);
     setShowResetDialog(false);
@@ -1759,40 +1813,6 @@ export const SendMediaInviteForm: React.FC<SendMediaInviteFormProps> = ({ onTest
                             helperText="Optional connection address override"
                           />
 
-                          {/*<TextInput*/}
-                          {/*  id={`channel-${index}-bandwidthType`}*/}
-                          {/*  label="Bandwidth Type (Optional)"*/}
-                          {/*  value={channel.bandwidthType || ''}*/}
-                          {/*  onChange={(value) => setFormData(prev => ({*/}
-                          {/*    ...prev,*/}
-                          {/*    sdp: {*/}
-                          {/*      ...prev.sdp,*/}
-                          {/*      channels: prev.sdp.channels.map((ch, i) => */}
-                          {/*        i === index ? { ...ch, bandwidthType: value } : ch*/}
-                          {/*      )*/}
-                          {/*    }*/}
-                          {/*  }))}*/}
-                          {/*  placeholder="CT"*/}
-                          {/*  helperText="Bandwidth type (CT, AS, etc.)"*/}
-                          {/*/>*/}
-
-                          {/*<NumberInput*/}
-                          {/*  id={`channel-${index}-bandwidth`}*/}
-                          {/*  label="Bandwidth (Optional)"*/}
-                          {/*  value={channel.bandwidth || ''}*/}
-                          {/*  onChange={(value) => setFormData(prev => ({*/}
-                          {/*    ...prev,*/}
-                          {/*    sdp: {*/}
-                          {/*      ...prev.sdp,*/}
-                          {/*      channels: prev.sdp.channels.map((ch, i) => */}
-                          {/*        i === index ? { ...ch, bandwidth: value ? Number(value) : undefined } : ch*/}
-                          {/*      )*/}
-                          {/*    }*/}
-                          {/*  }))}*/}
-                          {/*  min={0}*/}
-                          {/*  helperText="Bandwidth in kbps"*/}
-                          {/*/>*/}
-
                           <TextInput
                             id={`channel-${index}-label`}
                             label="Label (Optional)"
@@ -2227,11 +2247,11 @@ a=sendonly`}
                  </IconButton>
                </Tooltip>
              </Box>
-             
+
              {/* Group Selection Dropdown */}
              <Box sx={{ mb: 3 }}>
              </Box>
- 
+
              {Object.keys(groupedInvites).length === 0 ? (
                <Typography color="text.secondary">No saved invites found.</Typography>
              ) : (
@@ -2330,7 +2350,7 @@ a=sendonly`}
              )}
            </Box>
          )}
- 
+
          <ColoredJsonViewer
            response={result}
            error={error}
@@ -2391,8 +2411,8 @@ a=sendonly`}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowSaveDialog(false)}>Cancel</Button>
-          <Button 
-            onClick={handleConfirmSave} 
+          <Button
+            onClick={handleConfirmSave}
             variant="contained"
             disabled={!inviteName.trim() || !saveToGroup.trim()}
           >
