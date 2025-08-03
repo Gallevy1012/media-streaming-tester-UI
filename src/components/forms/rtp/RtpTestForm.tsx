@@ -833,7 +833,7 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
               onChange={handleInputChange('ssrc1')}
               required
               placeholder="12345"
-              helperText="List of Synchronization Source identifiers"
+              helperText="SSRC 1"
             />
             <NumberInput
               id="ssrc2"
@@ -841,7 +841,7 @@ export const RtpTestForm: React.FC<RtpFormProps> = ({ functionId, onTestComplete
               value={formData.ssrc2 || ''}
               onChange={handleInputChange('ssrc2')}
               placeholder="12345"
-              helperText="List of Synchronization Source identifiers"
+              helperText="SSRC 2"
             />
 
             <TextInput

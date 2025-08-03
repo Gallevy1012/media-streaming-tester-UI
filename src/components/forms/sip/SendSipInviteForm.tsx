@@ -48,6 +48,7 @@ interface SendSipInviteFormData {
     alias?: string;
   };
   customHeaders: Record<string, string>;
+  sendInviteWithSdp: boolean;
   sdp: {
     sessionVersion: number;
     origin: {
@@ -85,7 +86,6 @@ interface SendSipInviteFormData {
 }
 
 export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComplete, onBack }) => {
-  // HMR Test - This component should auto-reload when changed
   const [activeTab, setActiveTab] = useState(0);
   const [rawInviteText, setRawInviteText] = useState('');
   const [parseError, setParseError] = useState<string | null>(null);
@@ -104,6 +104,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
       alias: '',
     },
     customHeaders: {},
+    sendInviteWithSdp: true,
     sdp: {
       sessionVersion: 1,
       origin: {
@@ -288,7 +289,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
 
   // Generate SIP INVITE message preview
   const generateSipInvitePreview = (): string => {
-    const { destinationAddress, customHeaders, sdp } = formData;
+    const { destinationAddress, customHeaders, sdp, sendInviteWithSdp } = formData;
 
     // Basic SIP headers
     const sipRequestLine = `INVITE sip:${destinationAddress.ip}:${destinationAddress.port};transport=${destinationAddress.transportProtocol.toLowerCase()} SIP/2.0`;
@@ -308,40 +309,46 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
     // Add custom headers
     const customHeaderLines = Object.entries(customHeaders).map(([key, value]) => `${key}: ${value}`);
 
-    // Generate SDP content
-    const sdpContent = [
-      `v=0`,
-      `o=${sdp.origin.userName} ${sdp.origin.sessionId} ${sdp.origin.sessionVersion} ${sdp.origin.networkType} ${sdp.origin.addressType} ${sdp.origin.ip}`,
-      `s=${sdp.sessionName}`,
-      sdp.sessionInformation ? `i=${sdp.sessionInformation}` : null,
-      withCLine ? `c=${sdp.connection.networkType} ${sdp.connection.addressType} ${sdp.connection.ip}` : null,
-      `t=${sdp.timing.startTime} ${sdp.timing.stopTime}`,
-    ].filter(Boolean);
+    let sdpString = '';
+    let contentLength = 0;
 
-    // Add basic media descriptions for channels (simplified)
-    sdp.channels.forEach((channel) => {
-      const codecs = channel.codecs || [];
-      const payloadTypes = codecs.length > 0 ? codecs.join(' ') : '0';
-      sdpContent.push(`m=${channel.mediaType} ${channel.port} RTP/AVP ${payloadTypes}`);
+    // Only generate SDP if sendInviteWithSdp is true
+    if (sendInviteWithSdp) {
+      // Generate SDP content
+      const sdpContent = [
+        `v=0`,
+        `o=${sdp.origin.userName} ${sdp.origin.sessionId} ${sdp.origin.sessionVersion} ${sdp.origin.networkType} ${sdp.origin.addressType} ${sdp.origin.ip}`,
+        `s=${sdp.sessionName}`,
+        sdp.sessionInformation ? `i=${sdp.sessionInformation}` : null,
+        withCLine ? `c=${sdp.connection.networkType} ${sdp.connection.addressType} ${sdp.connection.ip}` : null,
+        `t=${sdp.timing.startTime} ${sdp.timing.stopTime}`,
+      ].filter(Boolean);
 
-      if (channel.connectionAddress && channel.connectionAddress.trim()) {
-        // You can adjust addressType if you support IP6
-        sdpContent.push(`c=IN IP4 ${channel.connectionAddress.trim()}`);
-      }
+      // Add basic media descriptions for channels (simplified)
+      sdp.channels.forEach((channel) => {
+        const codecs = channel.codecs || [];
+        const payloadTypes = codecs.length > 0 ? codecs.join(' ') : '0';
+        sdpContent.push(`m=${channel.mediaType} ${channel.port} RTP/AVP ${payloadTypes}`);
 
-      // Add basic codec attributes
-      if (codecs.length > 0) {
-        codecs.forEach((codec) => {
-          sdpContent.push(`a=rtpmap:${codec} ${codec}/8000`);
-        });
-      }      // Add sendrecv attribute based on channel state
-      const sendrecv = channel.channelState === 'SEND' ? 'sendonly' :
-                      channel.channelState === 'RECEIVE' ? 'recvonly' : 'sendrecv';
-      sdpContent.push(`a=${sendrecv}`);
-    });
+        if (channel.connectionAddress && channel.connectionAddress.trim()) {
+          // You can adjust addressType if you support IP6
+          sdpContent.push(`c=IN IP4 ${channel.connectionAddress.trim()}`);
+        }
 
-    const sdpString = sdpContent.join('\r\n');
-    const contentLength = new TextEncoder().encode(sdpString).length;
+        // Add basic codec attributes
+        if (codecs.length > 0) {
+          codecs.forEach((codec) => {
+            sdpContent.push(`a=rtpmap:${codec} ${codec}/8000`);
+          });
+        }      // Add sendrecv attribute based on channel state
+        const sendrecv = channel.channelState === 'SEND' ? 'sendonly' :
+                        channel.channelState === 'RECEIVE' ? 'recvonly' : 'sendrecv';
+        sdpContent.push(`a=${sendrecv}`);
+      });
+
+      sdpString = sdpContent.join('\r\n');
+      contentLength = new TextEncoder().encode(sdpString).length;
+    }
 
     // Combine all parts
     const sipMessage = [
@@ -436,6 +443,33 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
           // Parse To header: To: "VRSP" <sip:10.221.19.252>
           // Store the complete To header for proper reconstruction
           parsed.customHeaders!['To'] = trimmedLine.substring(3).trim();
+          
+          console.log('🔍 Parsing To header:', trimmedLine);
+          
+          // Extract display name for the destination address alias
+          // Try different patterns: "VRSP" or VRSP (with or without quotes)
+          let displayName = null;
+          
+          // Pattern 1: "Display Name" <sip:...>
+          const quotedMatch = trimmedLine.match(/To:\s*"([^"]+)"\s*<sip:/i);
+          if (quotedMatch && quotedMatch[1]) {
+            displayName = quotedMatch[1].trim();
+            console.log('🔍 Found quoted display name:', displayName);
+          } else {
+            // Pattern 2: Display Name <sip:...> (without quotes)
+            const unquotedMatch = trimmedLine.match(/To:\s*([^<]+?)\s*<sip:/i);
+            if (unquotedMatch && unquotedMatch[1] && unquotedMatch[1].trim() !== '') {
+              displayName = unquotedMatch[1].trim();
+              console.log('🔍 Found unquoted display name:', displayName);
+            }
+          }
+          
+          if (displayName) {
+            parsed.destinationAddress!.alias = displayName;
+            console.log('🔍 Set destination alias to:', displayName);
+          } else {
+            console.log('🔍 No display name found in To header');
+          }
         } else if (trimmedLine.startsWith('From:')) {
           // Parse From header: From: <sip:acmeSrc@172.21.13.164>;tag=1c257669691
           // Store the complete From header for proper reconstruction
@@ -667,6 +701,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
         sipTesterId: prev.sipTesterId, // Keep the existing tester ID
         destinationAddress: parsed.destinationAddress || prev.destinationAddress,
         customHeaders: parsed.customHeaders || {},
+        sendInviteWithSdp: true, 
         sdp: parsed.sdp ? {
           ...parsed.sdp,
           // Ensure we only use parsed channels, not merge with existing
@@ -700,7 +735,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
           throw new Error('Destination IP is required');
         }
 
-        const requestPayload = {
+        const requestPayload: any = {
           testerId: formData.sipTesterId.trim(),
           destinationAddress: {
             ip: formData.destinationAddress.ip.trim(),
@@ -708,8 +743,18 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
             transportProtocol: formData.destinationAddress.transportProtocol,
             alias: formData.destinationAddress.alias?.trim(),
           },
-          customHeaders: formData.customHeaders || {},
-          sdp: {
+          customHeaders: Object.fromEntries(
+            Object.entries(formData.customHeaders || {}).filter(([key, _]) => 
+              // Exclude standard SIP headers that the backend handles automatically
+              !['To', 'From', 'Via', 'Call-ID', 'CSeq', 'Contact', 'Content-Type', 'Content-Length', 'Max-Forwards'].includes(key)
+            )
+          ),
+          sendInviteWithSdp: formData.sendInviteWithSdp, // Include this flag for backend
+        };
+
+        // Set SDP based on sendInviteWithSdp flag
+        if (formData.sendInviteWithSdp) {
+          requestPayload.sdp = {
             ...formData.sdp,
             channels: formData.sdp.channels.map(channel => {
               // Ensure codecs array is never empty
@@ -736,29 +781,38 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                 attributes: channel.attributes || {}, // Include all attributes
               };
             }),
-          },
-        };
+          };
+        } else {
+          // Send SDP as null when sendInviteWithSdp is false
+          requestPayload.sdp = null;
+        }
 
         console.log('=== SENDING SIP INVITE REQUEST ===');
         console.log('Request payload:', JSON.stringify(requestPayload, null, 2));
-        console.log('Channels being sent:', requestPayload.sdp.channels);
-        requestPayload.sdp.channels.forEach((channel, index) => {
-          console.log(`Channel ${index + 1}:`, {
-            mediaType: channel.mediaType,
-            port: channel.port,
-            transportProtocol: channel.transportProtocol,
-            codecs: channel.codecs,
-            codecsLength: channel.codecs?.length || 0,
-            codecsString: channel.codecs?.join(' ') || 'EMPTY'
-          });
+        console.log('Send with SDP:', formData.sendInviteWithSdp);
+        
+        if (formData.sendInviteWithSdp && requestPayload.sdp && requestPayload.sdp.channels.length > 0) {
+          console.log('Channels being sent:', requestPayload.sdp.channels);
+          requestPayload.sdp.channels.forEach((channel: any, index: number) => {
+            console.log(`Channel ${index + 1}:`, {
+              mediaType: channel.mediaType,
+              port: channel.port,
+              transportProtocol: channel.transportProtocol,
+              codecs: channel.codecs,
+              codecsLength: channel.codecs?.length || 0,
+              codecsString: channel.codecs?.join(' ') || 'EMPTY'
+            });
 
-          // Validate that codecs are present
-          if (!channel.codecs || channel.codecs.length === 0) {
-            console.warn(`⚠️ Channel ${index + 1} has no codecs! This will result in incomplete m= line.`);
-          } else {
-            console.log(`✅ Channel ${index + 1} codecs OK: ${channel.codecs.join(' ')}`);
-          }
-        });
+            // Validate that codecs are present
+            if (!channel.codecs || channel.codecs.length === 0) {
+              console.warn(`⚠️ Channel ${index + 1} has no codecs! This will result in incomplete m= line.`);
+            } else {
+              console.log(`✅ Channel ${index + 1} codecs OK: ${channel.codecs.join(' ')}`);
+            }
+          });
+        } else {
+          console.log('SDP set to null - no SDP content will be included in the request (sendInviteWithSdp:', formData.sendInviteWithSdp, ')');
+        }
         console.log('=== END REQUEST DEBUG ===');
 
         const response = await sipTesterService.sendInvite(requestPayload);
@@ -884,6 +938,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
         alias: '',
       },
       customHeaders: {},
+      sendInviteWithSdp: true,
       sdp: {
         sessionVersion: 1,
         origin: {
@@ -1231,63 +1286,78 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                 placeholder="destination-alias"
                 helperText="Optional alias for the destination"
               />
+                          <FormControlLabel
+                          control={
+                              <Switch
+                              checked={formData.sendInviteWithSdp ?? true}
+                              onChange={(e) => setFormData(prev => ({ ...prev, sendInviteWithSdp: e.target.checked }))}
+                              />
+                          }
+                          label="Send Invite with SDP"
+                          />
 
-              <Typography variant="h6" sx={{ mt: 2, mb: 1, gridColumn: { md: '1 / -1' } }}>
-                SDP Configuration
-              </Typography>
+              {formData.sendInviteWithSdp && (
+                <Box sx={{ gridColumn: { md: '1 / -1' }, display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, mb: 1 }}>
+                  <Typography variant="h6">
+                    SDP Configuration
+                  </Typography>
+                </Box>
+              )}
 
-            {/* Basic SDP Fields */}
-            <NumberInput
-              id="sessionVersion"
-              label="Session Version"
-              value={formData.sdp.sessionVersion}
-              onChange={(value) => setFormData(prev => ({
-                ...prev,
-                sdp: {
-                  ...prev.sdp,
-                  sessionVersion: Number(value)
-                }
-              }))}
-              min={0}
-              helperText="SDP session version"
-              required
-            />
+              {/* Basic SDP Fields */}
+              {formData.sendInviteWithSdp && (
+                <React.Fragment>
+                  <NumberInput
+                    id="sessionVersion"
+                    label="Session Version"
+                    value={formData.sdp.sessionVersion}
+                    onChange={(value) => setFormData(prev => ({
+                      ...prev,
+                      sdp: {
+                        ...prev.sdp,
+                        sessionVersion: Number(value)
+                      }
+                    }))}
+                    min={0}
+                    helperText="SDP session version"
+                    required
+                  />
 
-            <TextInput
-              id="sessionName"
-              label="Session Name"
-              value={formData.sdp.sessionName}
-              onChange={(value) => setFormData(prev => ({
-                ...prev,
-                sdp: {
-                  ...prev.sdp,
-                  sessionName: value
-                }
-              }))}
-              placeholder="Test Session"
-              helperText="SDP session name"
-              required
-            />
+                  <TextInput
+                    id="sessionName"
+                    label="Session Name"
+                    value={formData.sdp.sessionName}
+                    onChange={(value) => setFormData(prev => ({
+                      ...prev,
+                      sdp: {
+                        ...prev.sdp,
+                        sessionName: value
+                      }
+                    }))}
+                    placeholder="Test Session"
+                    helperText="SDP session name"
+                    required
+                  />
 
-            <Box sx={{ gridColumn: { md: '1 / -1' } }}>
-              <TextInput
-                id="sessionInformation"
-                label="Session Information (Optional)"
-                value={formData.sdp.sessionInformation || ''}
-                onChange={(value) => setFormData(prev => ({
-                  ...prev,
-                  sdp: {
-                    ...prev.sdp,
-                    sessionInformation: value
-                  }
-                }))}
-                placeholder="Session description"
-                helperText="Optional session information"
-              />
-            </Box>
+                  <Box sx={{ gridColumn: { md: '1 / -1' } }}>
+                    <TextInput
+                      id="sessionInformation"
+                      label="Session Information (Optional)"
+                      value={formData.sdp.sessionInformation || ''}
+                      onChange={(value) => setFormData(prev => ({
+                        ...prev,
+                        sdp: {
+                          ...prev.sdp,
+                          sessionInformation: value
+                        }
+                      }))}
+                      placeholder="Session description"
+                      helperText="Optional session information"
+                    />
+                  </Box>
 
-            {/* Origin Accordion */}
-            <Box sx={{ gridColumn: { md: '1 / -1' } }}>
+                  {/* Origin Accordion */}
+                  <Box sx={{ gridColumn: { md: '1 / -1' } }}>
               <Accordion sx={{ mt: 2 }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Typography variant="subtitle1">Origin Configuration</Typography>
@@ -1415,8 +1485,7 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                   </Box>
                 </AccordionDetails>
               </Accordion>
-
-
+            </Box>
 
                 <Accordion sx={{ mt: 1 }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -1499,7 +1568,6 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                   </Box>
                 </AccordionDetails>)}
               </Accordion>
-
 
               {/* Timing Accordion */}
               <Accordion sx={{ mt: 1 }}>
@@ -1762,39 +1830,6 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                             helperText="Optional connection address override"
                           />
 
-                          {/*<TextInput*/}
-                          {/*  id={`channel-${index}-bandwidthType`}*/}
-                          {/*  label="Bandwidth Type (Optional)"*/}
-                          {/*  value={channel.bandwidthType || ''}*/}
-                          {/*  onChange={(value) => setFormData(prev => ({*/}
-                          {/*    ...prev,*/}
-                          {/*    sdp: {*/}
-                          {/*      ...prev.sdp,*/}
-                          {/*      channels: prev.sdp.channels.map((ch, i) => */}
-                          {/*        i === index ? { ...ch, bandwidthType: value } : ch*/}
-                          {/*      )*/}
-                          {/*    }*/}
-                          {/*  }))}*/}
-                          {/*  placeholder="CT"*/}
-                          {/*  helperText="Bandwidth type (CT, AS, etc.)"*/}
-                          {/*/>*/}
-
-                          {/*<NumberInput*/}
-                          {/*  id={`channel-${index}-bandwidth`}*/}
-                          {/*  label="Bandwidth (Optional)"*/}
-                          {/*  value={channel.bandwidth || ''}*/}
-                          {/*  onChange={(value) => setFormData(prev => ({*/}
-                          {/*    ...prev,*/}
-                          {/*    sdp: {*/}
-                          {/*      ...prev.sdp,*/}
-                          {/*      channels: prev.sdp.channels.map((ch, i) => */}
-                          {/*        i === index ? { ...ch, bandwidth: value ? Number(value) : undefined } : ch*/}
-                          {/*      )*/}
-                          {/*    }*/}
-                          {/*  }))}*/}
-                          {/*  min={0}*/}
-                          {/*  helperText="Bandwidth in kbps"*/}
-                          {/*/>*/}
 
                           <TextInput
                             id={`channel-${index}-label`}
@@ -1947,8 +1982,9 @@ export const SendSipInviteForm: React.FC<SendSipInviteFormProps> = ({ onTestComp
                   </Box>
                 </AccordionDetails>
               </Accordion>
+                </React.Fragment>
+              )}
             </Box>
-          </Box>
 
               {/* Left Column - SIP Message Preview */}
               <Box sx={{
@@ -2329,14 +2365,14 @@ a=sendonly`}
             )}
           </Box>
         )}
-
-        <ColoredJsonViewer
-          response={result}
-          error={error}
-          onBack={onBack}
-          title="Send SIP INVITE Response"
-        />
       </Paper>
+
+      <ColoredJsonViewer
+        response={result}
+        error={error}
+        onBack={onBack}
+        title="Send SIP INVITE Response"
+      />
 
       <AuthDialog
         open={isAuthDialogOpen}

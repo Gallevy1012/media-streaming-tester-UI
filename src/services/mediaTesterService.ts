@@ -95,7 +95,7 @@ class MediaTesterService {
 
   async gotIncomingRequests(request: SipQueryListRequest): Promise<any> {
     try {
-      return await testerHttpClient.post('/media-tester/gotIncomingRequests', request);
+      return await testerHttpClient.post('/media-tester/got-incoming-requests', request);
     } catch (error) {
       throw error;
     }
@@ -103,7 +103,7 @@ class MediaTesterService {
 
   async gotIncomingResponses(request: SipQueryListRequest): Promise<any> {
     try {
-      return await testerHttpClient.post('/media-tester/gotIncomingResponses', request);
+      return await testerHttpClient.post('/media-tester/got-incoming-responses', request);
     } catch (error) {
       throw error;
     }
@@ -111,7 +111,7 @@ class MediaTesterService {
 
   async sentOutgoingRequests(request: SipQueryListRequest): Promise<any> {
     try {
-      return await testerHttpClient.post('/media-tester/sentOutgoingRequests', request);
+      return await testerHttpClient.post('/media-tester/sent-outgoing-requests', request);
     } catch (error) {
       throw error;
     }
@@ -119,7 +119,7 @@ class MediaTesterService {
 
   async sentOutgoingResponses(request: SipQueryListRequest): Promise<any> {
     try {
-      return await testerHttpClient.post('/media-tester/sentOutgoingResponses', request);
+      return await testerHttpClient.post('/media-tester/sent-outgoing-responses', request);
     } catch (error) {
       throw error;
     }

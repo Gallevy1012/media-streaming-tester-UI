@@ -430,7 +430,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
               Interaction Key: {tester.interactionKey}
             </Typography>
           )}
-          {tester.operation && (
+          {tester.operation && tester.type !== 'media-tester' && (
             <Typography variant="caption" display="block" color="text.secondary">
               Tester role :
               {tester.operation == 'openReceivingPoints' ? 'Receiver' : 'Streamer'}
